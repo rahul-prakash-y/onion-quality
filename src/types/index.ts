@@ -63,6 +63,20 @@ export interface QualitySummary {
   priceRecommendation: PriceBreakdown;
 }
 
+export type GeographicRegion = 
+  | 'Maharashtra' 
+  | 'Madhya Pradesh' 
+  | 'Karnataka' 
+  | 'Gujarat' 
+  | 'Rajasthan';
+
+export interface HumanVerificationRecord {
+  status: 'pending' | 'approved' | 'flagged';
+  verifiedAt?: string;
+  feedbackNotes?: string;
+  adjustedCount?: number;
+}
+
 export interface DigitalCertificate {
   certificateId: string;
   timestamp: string;
@@ -70,14 +84,18 @@ export interface DigitalCertificate {
   farmerName: string;
   farmerPhone: string;
   procurementCenter: string;
+  geographicSource: GeographicRegion;
   inspectorId: string;
   inspectorName: string;
   variety: string;
   lotWeightQuintals: number;
   sampleWeightKg: number;
   summary: QualitySummary;
+  detections?: OnionDetection[];
   tamperProofHash: string;
   status: 'VALID' | 'DISPUTED' | 'RE_EVALUATED';
+  syncedToCloud?: boolean;
+  humanVerification?: HumanVerificationRecord;
   disputeDetails?: {
     raisedAt: string;
     reason: string;
@@ -96,5 +114,7 @@ export interface ProcurementCenter {
 }
 
 export type ActiveScreen = 'home' | 'inspection' | 'reports';
+
+export type InspectionStep = 'capture' | 'analyzing' | 'results' | 'report';
 
 export type Language = 'en' | 'hi';

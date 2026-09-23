@@ -167,6 +167,7 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
       farmerName: currentPreset.farmerName,
       farmerPhone: '+91 98220 ' + Math.floor(10000 + Math.random() * 90000),
       procurementCenter: currentPreset.originMandi,
+      geographicSource: 'Maharashtra',
       inspectorId: 'INS-MH-042',
       inspectorName: 'Anil Kulkarni (Chief Mandi Grader)',
       variety: currentPreset.variety,

@@ -2,33 +2,30 @@ import React from 'react';
 import { InspectionProvider, useInspection } from './context/InspectionContext';
 import { AppShell } from './components/AppShell';
 import { HomeScreen } from './components/HomeScreen';
-import { CameraScanner } from './components/CameraScanner';
+import { InspectionCapture } from './components/InspectionCapture';
+import { AIAnalysisResults } from './components/AIAnalysisResults';
+import { DigitalQualityReportScreen } from './components/DigitalQualityReportScreen';
 import { BatchHistory } from './components/BatchHistory';
 import { DigitalReportModal } from './components/DigitalReportModal';
 import { DisputeModal } from './components/DisputeModal';
 import { calculateQualitySummary } from './data/mockData';
-import { DigitalCertificate } from './types';
 
 function AppContent() {
   const { 
     currentScreen, 
+    inspectionStep, 
     reports, 
-    addReport, 
     updateReport, 
     selectedReport, 
     setSelectedReport, 
     activePreset, 
-    setActivePreset, 
     language,
     isDisputeModalOpen,
-    setIsDisputeModalOpen
+    setIsDisputeModalOpen,
+    currentBatchId,
+    activeDetections,
+    setActiveDetections
   } = useInspection();
-
-  // Handle generating new certificate from an inspection
-  const handleGenerateCertificate = (cert: DigitalCertificate) => {
-    addReport(cert);
-    setSelectedReport(cert);
-  };
 
   // Handle formal dispute submission
   const handleSubmitDispute = (reason: string) => {
@@ -61,6 +58,7 @@ function AppContent() {
       return d;
     });
 
+    setActiveDetections(recalibratedDetections);
     const recalibratedSummary = calculateQualitySummary(recalibratedDetections);
 
     updateReport(selectedReport.certificateId, {
@@ -77,19 +75,30 @@ function AppContent() {
 
   return (
     <AppShell>
-      {/* Dynamic Screen Routing */}
+      {/* 1. MODULE 2: Dashboard (Home Screen) */}
       {currentScreen === 'home' && <HomeScreen />}
 
+      {/* 2. INSPECTION WORKSPACE (MODULES 3, 4, 5) */}
       {currentScreen === 'inspection' && (
-        <CameraScanner
-          currentPreset={activePreset}
-          onSelectPreset={setActivePreset}
-          language={language}
-          onGenerateCertificate={handleGenerateCertificate}
-          onOpenDispute={() => setIsDisputeModalOpen(true)}
-        />
+        <>
+          {/* MODULE 3: Image Capture & Sample Upload (viewfinder, capture/upload, geographic profiling, analyzing state) */}
+          {(inspectionStep === 'capture' || inspectionStep === 'analyzing') && (
+            <InspectionCapture />
+          )}
+
+          {/* MODULE 4: AI Analysis Results & Grading Engine View (annotated image, defect breakdown, grading estimation, human verification) */}
+          {inspectionStep === 'results' && (
+            <AIAnalysisResults />
+          )}
+
+          {/* MODULE 5: Digital Quality Report Generation (formal layout, grading rules summary, sync to cloud, download PDF) */}
+          {inspectionStep === 'report' && (
+            <DigitalQualityReportScreen />
+          )}
+        </>
       )}
 
+      {/* 3. REPORTS TAB (Past Inspection Reports Ledger) */}
       {currentScreen === 'reports' && (
         <div className="p-3.5 sm:p-4">
           <BatchHistory
@@ -100,8 +109,8 @@ function AppContent() {
         </div>
       )}
 
-      {/* Official Digital Certificate Modal */}
-      {selectedReport && (
+      {/* Official Certificate Modal for Archived Reports */}
+      {selectedReport && currentScreen === 'reports' && (
         <DigitalReportModal
           certificate={selectedReport}
           onClose={() => setSelectedReport(null)}
@@ -117,16 +126,17 @@ function AppContent() {
             selectedReport || {
               certificateId: `OV-2026-MH-${Math.floor(10000 + Math.random() * 90000)}`,
               timestamp: new Date().toLocaleString(),
-              lotId: activePreset.lotNumber,
-              farmerName: activePreset.farmerName,
+              lotId: currentBatchId,
+              farmerName: 'Rameshwar Patil',
               farmerPhone: '+91 98220 44921',
-              procurementCenter: activePreset.originMandi,
+              procurementCenter: 'Lasalgaon APMC Main Yard',
+              geographicSource: 'Maharashtra',
               inspectorId: 'INS-MH-042',
               inspectorName: 'Anil Kulkarni',
-              variety: activePreset.variety,
+              variety: 'Bhima Super (Nashik Red)',
               lotWeightQuintals: 42,
-              sampleWeightKg: activePreset.sampleWeightKg,
-              summary: calculateQualitySummary(activePreset.detections),
+              sampleWeightKg: 5.0,
+              summary: calculateQualitySummary(activeDetections),
               tamperProofHash: 'e391b10ca849204cdbf98a101239aa812',
               status: 'VALID'
             }

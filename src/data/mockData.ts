@@ -243,6 +243,7 @@ export const INITIAL_BATCH_HISTORY: DigitalCertificate[] = [
     farmerName: 'Rameshwar Patil',
     farmerPhone: '+91 98220 14592',
     procurementCenter: 'Lasalgaon APMC Main Yard',
+    geographicSource: 'Maharashtra',
     inspectorId: 'INS-MH-042',
     inspectorName: 'Anil Kulkarni (Grading Officer)',
     variety: 'Bhima Super (Nashik Red)',
@@ -265,7 +266,12 @@ export const INITIAL_BATCH_HISTORY: DigitalCertificate[] = [
       }
     },
     tamperProofHash: 'a7f92b4c91823de7e88301fa394bc920f',
-    status: 'VALID'
+    status: 'VALID',
+    syncedToCloud: true,
+    humanVerification: {
+      status: 'approved',
+      verifiedAt: '2026-09-23 08:46 AM'
+    }
   },
   {
     certificateId: 'OV-2026-MH-78904',
@@ -274,6 +280,7 @@ export const INITIAL_BATCH_HISTORY: DigitalCertificate[] = [
     farmerName: 'Dattatray Gaikwad',
     farmerPhone: '+91 94231 88410',
     procurementCenter: 'Lasalgaon APMC Main Yard',
+    geographicSource: 'Maharashtra',
     inspectorId: 'INS-MH-042',
     inspectorName: 'Anil Kulkarni (Grading Officer)',
     variety: 'Nashik Dark Red',
@@ -297,6 +304,7 @@ export const INITIAL_BATCH_HISTORY: DigitalCertificate[] = [
     },
     tamperProofHash: 'e391b10ca849204cdbf98a101239aa812',
     status: 'DISPUTED',
+    syncedToCloud: false,
     disputeDetails: {
       raisedAt: '2026-09-22 04:30 PM',
       reason: 'Farmer disputed Grade B classification, claiming 2 sample bulbs were 54mm and within Grade A tolerance. Secondary optical re-scan requested.',
@@ -310,6 +318,7 @@ export const INITIAL_BATCH_HISTORY: DigitalCertificate[] = [
     farmerName: 'Mallikarjun Reddy',
     farmerPhone: '+91 97412 55903',
     procurementCenter: 'Hubballi Cotton & Agri Market',
+    geographicSource: 'Karnataka',
     inspectorId: 'INS-KA-118',
     inspectorName: 'K. Somanna',
     variety: 'Kurnool Desi Pink',
@@ -332,6 +341,11 @@ export const INITIAL_BATCH_HISTORY: DigitalCertificate[] = [
       }
     },
     tamperProofHash: 'c401fa9901428bd330a104be129994ca1',
-    status: 'VALID'
+    status: 'VALID',
+    syncedToCloud: true,
+    humanVerification: {
+      status: 'approved',
+      verifiedAt: '2026-09-22 11:22 AM'
+    }
   }
 ];

@@ -1,18 +1,16 @@
 import React from 'react';
 import { 
   ScanLine, 
-  FileText, 
-  CheckCircle2, 
-  AlertTriangle, 
+  Calendar, 
   TrendingUp, 
-  ShieldCheck, 
-  Sparkles, 
   ChevronRight, 
-  Calendar,
-  Layers,
-  IndianRupee,
-  Building2,
-  Award
+  Sparkles, 
+  Building2, 
+  Layers, 
+  Plus, 
+  ShieldCheck, 
+  Award,
+  CheckCircle2
 } from 'lucide-react';
 import { useInspection } from '../context/InspectionContext';
 import { TRANSLATIONS } from '../data/translations';
@@ -20,6 +18,8 @@ import { TRANSLATIONS } from '../data/translations';
 export const HomeScreen: React.FC = () => {
   const { 
     setCurrentScreen, 
+    setInspectionStep, 
+    generateNewBatchId, 
     reports, 
     setSelectedReport, 
     selectedCenter, 
@@ -28,111 +28,122 @@ export const HomeScreen: React.FC = () => {
 
   const t = TRANSLATIONS[language];
 
-  // Quick stats calculation
-  const totalLots = reports.length;
-  const gradeAPassCount = reports.filter(r => r.summary.verdict === 'APPROVED_GRADE_A').length;
-  const passRate = totalLots > 0 ? Math.round((gradeAPassCount / totalLots) * 100) : 85;
-  const totalSettlement = reports.reduce((acc, r) => acc + r.summary.priceRecommendation.totalEstimatedLotValue, 0);
+  // Calculate Metrics from reports
+  const totalInspectionsToday = reports.length;
+  const totalGradeAPercent = reports.reduce((acc, r) => acc + r.summary.gradeAPercent, 0);
+  const averageGradeAPercent = totalInspectionsToday > 0 ? Math.round(totalGradeAPercent / totalInspectionsToday) : 84;
+
+  const handleStartInspection = () => {
+    generateNewBatchId();
+    setInspectionStep('capture');
+    setCurrentScreen('inspection');
+  };
 
   return (
-    <div className="p-4 space-y-4 animate-in fade-in-50 duration-300">
-      {/* 1. Mandi Inspector Welcome Card */}
+    <div className="p-4 space-y-4 animate-in fade-in-50 duration-300 relative">
+      {/* 1. Header with title "OnionVision AI" welcoming the inspector */}
       <div className="p-4 rounded-3xl bg-gradient-to-br from-emerald-950 via-slate-900 to-slate-950 border border-emerald-500/40 shadow-glow-green relative overflow-hidden">
-        {/* Subtle background glow */}
-        <div className="absolute -top-12 -right-12 w-36 h-36 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute -top-10 -right-10 w-36 h-36 bg-emerald-500/15 rounded-full blur-2xl pointer-events-none" />
 
-        <div className="flex items-center justify-between text-xs text-emerald-300 font-semibold mb-2">
+        <div className="flex items-center justify-between text-xs text-emerald-300 font-semibold mb-1.5">
           <span className="flex items-center gap-1.5 uppercase tracking-wider text-[10.5px]">
             <Building2 className="w-3.5 h-3.5 text-amber-400" />
             {selectedCenter.name}
           </span>
-          <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-[10px]">
-            Yard Terminal 01
+          <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-[10px] text-emerald-300 font-medium">
+            AI Mandi Grader
           </span>
         </div>
 
-        <h2 className="text-lg font-extrabold text-white tracking-tight leading-snug">
-          Objective Optical Onion Grading System
-        </h2>
+        <h1 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
+          <span>🧅</span>
+          <span>OnionVision AI</span>
+        </h1>
         <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-          Eliminate manual subjectivity, dispute risks, and unfair price deductions with real-time computer vision analysis.
+          Welcome, Mandi Inspector. Automated edge-AI vision system for objective caliber measurement, defect identification, and dispute-free grading.
         </p>
 
-        {/* Quick Launch Inspection Button */}
-        <div className="mt-4 pt-3 border-t border-emerald-900/60">
+        {/* Large Prominent "Start New Inspection" Card */}
+        <div className="mt-3.5 pt-3 border-t border-emerald-900/60">
           <button
-            onClick={() => setCurrentScreen('inspection')}
-            className="w-full py-3 px-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-950/60 flex items-center justify-center gap-2 active:scale-98 transition"
-            id="home-start-inspection-btn"
+            onClick={handleStartInspection}
+            className="w-full py-3 px-4 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-950/80 flex items-center justify-center gap-2.5 active:scale-98 transition group"
+            id="start-inspection-hero-btn"
           >
-            <ScanLine className="w-4 h-4 text-slate-950" />
-            <span>Start New Optical Inspection</span>
+            <div className="w-6 h-6 rounded-lg bg-black/15 flex items-center justify-center group-hover:scale-110 transition">
+              <ScanLine className="w-4 h-4 text-slate-950" />
+            </div>
+            <span>Start New Inspection</span>
           </button>
         </div>
       </div>
 
-      {/* 2. Key Metrics Bar */}
-      <div className="grid grid-cols-3 gap-2">
-        {/* Total Inspected */}
-        <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800 shadow-md text-center">
-          <span className="text-[10px] uppercase font-bold text-slate-400 block">
-            Inspected
+      {/* 2. Summary Card: "Total Inspections Today" and "Average Grade A %" */}
+      <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-md">
+        <div className="flex items-center justify-between text-xs mb-3">
+          <span className="font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+            <Award className="w-4 h-4 text-emerald-400" />
+            Daily Mandi Quality Summary
           </span>
-          <div className="text-xl font-black text-white font-sans mt-0.5">
-            {totalLots} <span className="text-xs font-normal text-slate-400">Lots</span>
-          </div>
-          <span className="text-[9.5px] text-emerald-400 block mt-0.5 font-medium">
-            Active today
+          <span className="text-[10.5px] font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-800/40">
+            Live Yard Data
           </span>
         </div>
 
-        {/* Grade A Pass Rate */}
-        <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800 shadow-md text-center">
-          <span className="text-[10px] uppercase font-bold text-slate-400 block">
-            Grade A Pass
-          </span>
-          <div className="text-xl font-black text-emerald-400 font-sans mt-0.5">
-            {passRate}%
+        <div className="grid grid-cols-2 gap-3">
+          {/* Total Inspections Today */}
+          <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">
+              Total Inspections Today
+            </span>
+            <div className="flex items-baseline gap-1 mt-1">
+              <span className="text-2xl font-black text-white font-sans">
+                {totalInspectionsToday}
+              </span>
+              <span className="text-xs text-slate-400 font-medium">Lots</span>
+            </div>
+            <span className="text-[9.5px] text-emerald-400 block mt-1">
+              ✓ 100% digitally certified
+            </span>
           </div>
-          <span className="text-[9.5px] text-slate-400 block mt-0.5">
-            Export standard
-          </span>
-        </div>
 
-        {/* Fair Settlement Value */}
-        <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800 shadow-md text-center">
-          <span className="text-[10px] uppercase font-bold text-slate-400 block">
-            Settlement
-          </span>
-          <div className="text-base font-black text-white font-mono mt-1">
-            ₹{(totalSettlement / 100000).toFixed(1)}L
+          {/* Average Grade A % */}
+          <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">
+              Average Grade A %
+            </span>
+            <div className="flex items-baseline gap-1 mt-1">
+              <span className="text-2xl font-black text-emerald-400 font-sans">
+                {averageGradeAPercent}%
+              </span>
+              <span className="text-[10px] text-slate-400">compliance</span>
+            </div>
+            <span className="text-[9.5px] text-slate-400 block mt-1">
+              AGMARK &ge;45mm standard
+            </span>
           </div>
-          <span className="text-[9.5px] text-slate-400 block mt-0.5 font-sans">
-            Total APMC Value
-          </span>
         </div>
       </div>
 
-      {/* 3. Recent Inspection Reports Preview */}
+      {/* 3. Recent Inspections List with thumbnail, date, batch ID, Grade A % */}
       <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 shadow-md space-y-2.5">
         <div className="flex items-center justify-between text-xs">
           <span className="font-bold text-white tracking-wide uppercase flex items-center gap-1.5">
-            <FileText className="w-3.5 h-3.5 text-emerald-400" />
-            Recent Quality Reports
+            <Layers className="w-3.5 h-3.5 text-emerald-400" />
+            Recent Inspections
           </span>
           <button
             onClick={() => setCurrentScreen('reports')}
             className="text-[11px] text-emerald-400 font-semibold hover:underline flex items-center gap-0.5"
-            id="view-all-reports-link"
+            id="see-all-reports-btn"
           >
             <span>View All ({reports.length})</span>
             <ChevronRight className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        {/* Preview List */}
         <div className="space-y-2">
-          {reports.slice(0, 3).map((report) => {
+          {reports.map((report) => {
             const isGradeA = report.summary.verdict === 'APPROVED_GRADE_A';
             const isURS = report.summary.verdict === 'REJECTED_URS';
 
@@ -143,34 +154,53 @@ export const HomeScreen: React.FC = () => {
                   setSelectedReport(report);
                   setCurrentScreen('reports');
                 }}
-                className="p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 cursor-pointer transition flex items-center justify-between gap-2"
+                className="p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 cursor-pointer transition flex items-center justify-between gap-3 group"
               >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-mono text-xs font-bold text-white">
-                      {report.lotId}
-                    </span>
-                    <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full uppercase ${
-                      isGradeA 
-                        ? 'bg-emerald-500/20 text-emerald-300' 
-                        : isURS 
-                          ? 'bg-rose-500/20 text-rose-300' 
-                          : 'bg-amber-500/20 text-amber-300'
-                    }`}>
-                      {report.summary.verdict.replace('_', ' ')}
-                    </span>
+                {/* Thumbnail representation */}
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border shadow-inner ${
+                    isGradeA 
+                      ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300' 
+                      : isURS 
+                        ? 'bg-rose-950/60 border-rose-500/40 text-rose-300' 
+                        : 'bg-amber-950/60 border-amber-500/40 text-amber-300'
+                  }`}>
+                    <span className="text-lg">🧅</span>
                   </div>
-                  <span className="text-[10.5px] text-slate-400 block truncate">
-                    {report.farmerName} • {report.variety}
-                  </span>
+
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono text-xs font-bold text-white group-hover:text-emerald-300 transition">
+                        {report.lotId}
+                      </span>
+                      <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full uppercase bg-slate-700/80 text-slate-300">
+                        {report.geographicSource}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[10.5px] text-slate-400 mt-0.5">
+                      <span className="flex items-center gap-0.5">
+                        <Calendar className="w-3 h-3 text-slate-500" />
+                        {report.timestamp.split(' ')[0]}
+                      </span>
+                      <span>•</span>
+                      <span className="truncate">{report.farmerName}</span>
+                    </div>
+                  </div>
                 </div>
 
+                {/* Calculated Grade A Percentage */}
                 <div className="text-right shrink-0">
-                  <span className="text-xs font-bold text-emerald-300 font-mono block">
-                    ₹{report.summary.priceRecommendation.recommendedPricePerQtl}/qtl
-                  </span>
-                  <span className="text-[9.5px] text-slate-400 block">
-                    Score: {report.summary.overallScore}%
+                  <div className="flex items-baseline justify-end gap-1">
+                    <span className="text-sm font-black text-emerald-400 font-sans">
+                      {report.summary.gradeAPercent}%
+                    </span>
+                    <span className="text-[10px] text-slate-400">Grade A</span>
+                  </div>
+                  <span className={`text-[9.5px] font-bold uppercase block mt-0.5 ${
+                    isGradeA ? 'text-emerald-400' : isURS ? 'text-rose-400' : 'text-amber-400'
+                  }`}>
+                    {report.summary.verdict.replace('_', ' ')}
                   </span>
                 </div>
               </div>
@@ -179,32 +209,16 @@ export const HomeScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* 4. Mandi Grading Standard Reference */}
-      <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 shadow-md space-y-2.5 text-xs">
-        <span className="font-bold text-white tracking-wide uppercase flex items-center gap-1.5">
-          <Award className="w-3.5 h-3.5 text-amber-400" />
-          APMC AGMARK Grading Specification
-        </span>
-
-        <div className="grid grid-cols-3 gap-2 text-center text-[10.5px]">
-          <div className="p-2 rounded-xl bg-emerald-950/30 border border-emerald-900/50">
-            <span className="text-emerald-400 font-bold block">Grade A</span>
-            <span className="text-white font-mono text-xs font-semibold block mt-0.5">&ge; 45 mm</span>
-            <span className="text-[9px] text-slate-400 block mt-0.5">Firm, dry neck, 0 rot</span>
-          </div>
-
-          <div className="p-2 rounded-xl bg-amber-950/30 border border-amber-900/50">
-            <span className="text-amber-400 font-bold block">Grade B</span>
-            <span className="text-white font-mono text-xs font-semibold block mt-0.5">35 - 45 mm</span>
-            <span className="text-[9px] text-slate-400 block mt-0.5">Minor scale flaking</span>
-          </div>
-
-          <div className="p-2 rounded-xl bg-rose-950/30 border border-rose-900/50">
-            <span className="text-rose-400 font-bold block">URS Rejects</span>
-            <span className="text-white font-mono text-xs font-semibold block mt-0.5">&lt; 35 mm</span>
-            <span className="text-[9px] text-slate-400 block mt-0.5">Sprouts / Neck rot</span>
-          </div>
-        </div>
+      {/* 4. Floating Action Button (FAB) for Start New Inspection */}
+      <div className="fixed bottom-20 right-4 sm:right-auto sm:left-1/2 sm:translate-x-36 z-30">
+        <button
+          onClick={handleStartInspection}
+          className="w-13 h-13 p-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-2xl shadow-emerald-500/40 border border-emerald-300/40 flex items-center justify-center active:scale-90 transition-all hover:scale-105 group"
+          title="Start New Inspection"
+          id="fab-start-inspection"
+        >
+          <Plus className="w-6 h-6 stroke-[3] group-hover:rotate-90 transition-transform duration-300" />
+        </button>
       </div>
     </div>
   );
