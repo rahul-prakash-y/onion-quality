@@ -95,4 +95,6 @@ export interface ProcurementCenter {
   qualityPassingRate: number;
 }
 
+export type ActiveScreen = 'home' | 'inspection' | 'reports';
+
 export type Language = 'en' | 'hi';
