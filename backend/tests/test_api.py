@@ -1,10 +1,15 @@
 import io
+import asyncio
 import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 
 from app.main import app
 from app.config import settings
+from app.db import init_db
+
+# Initialize database schema for test client
+asyncio.run(init_db())
 
 client = TestClient(app)
 

@@ -21,27 +21,71 @@ Agricultural computer vision inspection and automated grading system for onions.
 backend/
 ├── app/
 │   ├── __init__.py
-│   ├── main.py                  # FastAPI app factory, CORS setup, exception handlers
-│   ├── config.py                # Configurations, paths, mandi MSP constants
+│   ├── main.py                  # FastAPI app factory, CORS setup, DB lifespan
+│   ├── config.py                # Configurations, database URLs, Mandi MSP constants
+│   ├── db/                      # National Onion Intelligence Dataset Database Layer
+│   │   ├── __init__.py          # Exports session, models, and repository
+│   │   ├── session.py           # Async SQLAlchemy engine, session maker, get_async_db
+│   │   ├── models.py            # InspectionRecordModel ORM schema (SQLAlchemy 2.0)
+│   │   ├── repository.py        # Asynchronous CRUD repository operations
+│   │   └── mongodb.py           # Alternative MongoDB Motor async implementation
 │   ├── models/
 │   │   ├── __init__.py
 │   │   └── schemas.py           # Pydantic v2 data models for requests & responses
 │   ├── routes/
 │   │   ├── __init__.py
-│   │   ├── inspection.py        # /upload, /{id}/analyze, /{id}/verify, /{id}
-│   │   └── reports.py           # /history, /{id}, /analytics/summary, /learning/logs
+│   │   ├── inspection.py        # /upload, /{id}/analyze, /{id}/verify endpoints
+│   │   └── reports.py           # /history, /{id}, /dataset/intelligence endpoints
 │   ├── services/
 │   │   ├── __init__.py
 │   │   ├── ai_engine.py         # Mock AI grading engine & APMC mathematical formulas
-│   │   └── storage.py           # In-memory + persistent repository & uploads manager
+│   │   └── storage.py           # File storage & uploads manager
 │   └── uploads/                 # Local directory for temporary inspection images
 ├── tests/
 │   ├── __init__.py
-│   └── test_api.py              # Pytest & TestClient automated integration tests
+│   ├── test_api.py              # Pytest & TestClient automated integration tests
+│   └── test_db.py               # Unit & integration tests for async DB repository
 ├── requirements.txt
 ├── run.py                       # CLI application launcher
 └── README.md
 ```
+
+---
+
+## 🗄️ Database Architecture: National Onion Intelligence Dataset
+
+The system is architected for building a long-term **National Onion Intelligence Dataset** tracking harvest quality, defect trends, and price valuations across major APMC Mandis (Maharashtra, Karnataka, Madhya Pradesh, Gujarat, Rajasthan).
+
+### Supported Databases
+
+1. **PostgreSQL with Async SQLAlchemy (`asyncpg`)** *(Default Enterprise Choice)*:
+   - Configured via `DATABASE_URL`:
+     ```bash
+     export DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:5432/onionvision_db"
+     ```
+   - Features connection pooling (`pool_size=20`, `max_overflow=10`, `pool_pre_ping=True`).
+   - For frictionless local development and testing, automatically defaults to async SQLite (`sqlite+aiosqlite:///./onionvision.db`).
+
+2. **MongoDB with Motor (`motor.motor_asyncio`)** *(Alternative Document Store Choice)*:
+   - Configured via `MONGODB_URI` and `MONGODB_DB_NAME` in `app/db/mongodb.py`.
+
+### Schema: `InspectionRecord`
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `id` | Integer | Primary Key, Autoincrement | Internal surrogate key |
+| `inspection_id` | String(64) | Unique, Indexed, Non-null | Unique transaction identifier |
+| `timestamp` | DateTime(tz=True) | Indexed, Non-null | Timestamp of tray capture |
+| `inspector_id` | String(64) | Indexed, Nullable | Verifying grading officer ID |
+| `geographic_source` | String(64) | Indexed, Non-null | State of harvest (e.g. Maharashtra, Karnataka) |
+| `original_image_path` | String(512) | Non-null | Filesystem path to the raw captured image |
+| `ai_predictions` | JSON / JSONB | Nullable | Counts (`healthy`, `damaged`, `rotten`, `sprouted`, `undersized`), percentages (`Grade A`, `URS`), verdict, score, detections |
+| `is_human_verified` | Boolean | Indexed, Non-null, Default=False | Human-in-the-loop review flag |
+| `verified_data` | JSON / JSONB | Nullable | Human-corrected counts, recalculated percentages, notes, learning deltas |
+| `certificate_id` | String(64) | Unique, Indexed, Nullable | APMC digital certificate ID |
+| `lot_id` | String(64) | Indexed, Nullable | Mandi lot batch tracking number |
+| `verdict` | String(32) | Indexed, Nullable | `APPROVED_GRADE_A`, `CONDITIONAL_GRADE_B`, `REJECTED_URS` |
+
 
 ---
 

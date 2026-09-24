@@ -12,11 +12,14 @@ from fastapi import (
     Form,
     HTTPException,
     UploadFile,
+    Depends,
     status
 )
 from fastapi.responses import FileResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
+from ..db import get_async_db, InspectionRepository
 from ..models.schemas import (
     UploadResponse,
     AnalysisResponse,
@@ -47,7 +50,8 @@ async def upload_inspection_image(
     region: Optional[str] = Form("Maharashtra", description="Geographic origin state"),
     variety: Optional[str] = Form("Bhima Super (Nashik Red)", description="Cultivar variety"),
     farmer_name: Optional[str] = Form(None, description="Farmer name associated with lot"),
-    preset_hint: Optional[str] = Form(None, description="Optional defect preset hint for demo/testing")
+    preset_hint: Optional[str] = Form(None, description="Optional defect preset hint for demo/testing"),
+    db: AsyncSession = Depends(get_async_db)
 ):
     # Validate content type
     content_type = file.content_type or ""
@@ -110,6 +114,15 @@ async def upload_inspection_image(
         metadata=metadata
     )
 
+    # Persist in National Onion Intelligence Dataset database
+    await InspectionRepository.create_inspection(
+        db=db,
+        inspection_id=record.inspection_id,
+        original_image_path=str(target_path),
+        geographic_source=region or "Maharashtra",
+        metadata=metadata
+    )
+
     return UploadResponse(
         inspection_id=record.inspection_id,
         filename=record.filename,
@@ -126,27 +139,43 @@ async def upload_inspection_image(
     summary="Trigger mock AI quality analysis",
     description="Trigger the mock AI analysis for a given ID. Return a JSON payload containing: total onions detected, counts for (healthy, damaged, rotten, sprouted, undersized), and calculated percentages for Grade A and URS (Under Rejection Standard)."
 )
-async def analyze_inspection(inspection_id: str):
+async def analyze_inspection(
+    inspection_id: str,
+    db: AsyncSession = Depends(get_async_db)
+):
     record = inspection_storage.get_inspection(inspection_id)
     if not record:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Inspection with ID '{inspection_id}' not found. Please upload an image first."
-        )
+        # Check database as fallback
+        db_record = await InspectionRepository.get_by_inspection_id(db, inspection_id)
+        if not db_record:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Inspection with ID '{inspection_id}' not found. Please upload an image first."
+            )
 
     # Check if analysis has already been performed
-    if record.analysis:
+    if record and record.analysis:
         return record.analysis
 
-    preset_hint = record.metadata.get("preset_hint")
+    preset_hint = record.metadata.get("preset_hint") if record else None
+    image_path = str(record.file_path) if record else db_record.original_image_path
     analysis = AIGradingEngine.analyze(
         inspection_id=inspection_id,
-        image_path=str(record.file_path),
+        image_path=image_path,
         preset_hint=preset_hint
     )
 
-    # Store analysis in record
-    inspection_storage.set_inspection_analysis(inspection_id, analysis)
+    # Store analysis in in-memory storage
+    if record:
+        inspection_storage.set_inspection_analysis(inspection_id, analysis)
+
+    # Persist AI predictions in database
+    await InspectionRepository.update_ai_predictions(
+        db=db,
+        inspection_id=inspection_id,
+        ai_predictions=analysis.model_dump(),
+        verdict=analysis.verdict
+    )
 
     return analysis
 
@@ -158,7 +187,8 @@ async def analyze_inspection(inspection_id: str):
 )
 async def verify_inspection(
     inspection_id: str,
-    payload: VerificationRequest
+    payload: VerificationRequest,
+    db: AsyncSession = Depends(get_async_db)
 ):
     record = inspection_storage.get_inspection(inspection_id)
     if not record:
@@ -257,6 +287,26 @@ async def verify_inspection(
         "inspector_id": payload.inspector_id
     }
     inspection_storage.record_learning_event(learning_event)
+
+    # Persist verification and learning delta in National Onion Intelligence Dataset database
+    verified_data_payload = {
+        "summary": recalculated_summary.model_dump(),
+        "certificate_id": report.certificate_id,
+        "verified_counts": verified_counts.model_dump(),
+        "verified_at": now_iso,
+        "feedback_notes": payload.feedback_notes,
+        "inspector_name": payload.inspector_name,
+        "tamper_proof_hash": tamper_proof_hash,
+        "learning_delta": delta_vector
+    }
+    await InspectionRepository.verify_inspection(
+        db=db,
+        inspection_id=inspection_id,
+        inspector_id=payload.inspector_id or "INS-APMC-042",
+        verified_data=verified_data_payload,
+        certificate_id=report.certificate_id,
+        verdict=recalculated_summary.verdict
+    )
 
     return VerificationResponse(
         inspection_id=inspection_id,

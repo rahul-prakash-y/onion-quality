@@ -19,6 +19,18 @@ class Settings:
     )
     API_V1_STR: str = "/api/v1"
     
+    # Database Configurations
+    # Production PostgreSQL: "postgresql+asyncpg://postgres:postgres@localhost:5432/onionvision_db"
+    # Local Async SQLite fallback: "sqlite+aiosqlite:///./onionvision.db"
+    DATABASE_URL: str = os.getenv(
+        "DATABASE_URL",
+        f"sqlite+aiosqlite:///{BASE_DIR / 'onionvision.db'}"
+    )
+    # Optional MongoDB Motor URI
+    MONGODB_URI: str = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
+    MONGODB_DB_NAME: str = os.getenv("MONGODB_DB_NAME", "national_onion_intelligence")
+    DB_ECHO_SQL: bool = os.getenv("DB_ECHO_SQL", "false").lower() == "true"
+
     # Upload Configurations
     UPLOAD_PATH: Path = UPLOAD_DIR
     MAX_UPLOAD_SIZE_BYTES: int = 25 * 1024 * 1024  # 25 MB

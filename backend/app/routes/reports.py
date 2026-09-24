@@ -1,5 +1,8 @@
 from typing import Optional, List
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, Depends, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from ..db import get_async_db, InspectionRepository
 from ..models.schemas import (
     ReportHistoryResponse,
     DigitalCertificateReport,
@@ -16,32 +19,66 @@ router = APIRouter(
     "/history",
     response_model=ReportHistoryResponse,
     summary="Fetch all verified inspection reports",
-    description="Fetch a list of all verified inspection reports with optional filtering by verdict, region, and keyword search."
+    description="Fetch a list of all verified inspection reports with optional filtering by verdict, region, and keyword search from the National Onion Intelligence Dataset."
 )
 async def get_reports_history(
     verdict: Optional[VerdictType] = Query(None, description="Filter by classification verdict"),
     region: Optional[str] = Query(None, description="Filter by state / geographic source"),
     search: Optional[str] = Query(None, description="Search query across Certificate ID, Lot ID, or Farmer Name"),
     limit: int = Query(50, ge=1, le=100, description="Maximum reports to return"),
-    offset: int = Query(0, ge=0, description="Offset index for pagination")
+    offset: int = Query(0, ge=0, description="Offset index for pagination"),
+    db: AsyncSession = Depends(get_async_db)
 ):
-    reports = inspection_storage.list_reports(
+    # Query database records
+    db_records = await InspectionRepository.query_history(
+        db=db,
+        verified_only=True,
         verdict=verdict,
         region=region,
         search=search,
         limit=limit,
         offset=offset
     )
-    total_count = inspection_storage.count_reports(
+
+    # Convert database records to Pydantic reports
+    db_reports: List[DigitalCertificateReport] = []
+    for r in db_records:
+        mapped = InspectionRepository.map_to_pydantic_report(r)
+        if mapped:
+            db_reports.append(mapped)
+
+    # Also include in-memory pre-seeded storage reports if database has few records
+    storage_reports = inspection_storage.list_reports(
         verdict=verdict,
         region=region,
-        search=search
+        search=search,
+        limit=limit,
+        offset=offset
     )
+
+    # Deduplicate by certificate_id
+    existing_cert_ids = {r.certificate_id for r in db_reports}
+    combined_reports = list(db_reports)
+    for sr in storage_reports:
+        if sr.certificate_id not in existing_cert_ids:
+            combined_reports.append(sr)
+
+    total_count = len(combined_reports)
 
     return ReportHistoryResponse(
         total_count=total_count,
-        reports=reports
+        reports=combined_reports[:limit]
     )
+
+@router.get(
+    "/dataset/intelligence",
+    summary="National Onion Intelligence Dataset summary",
+    description="Aggregates quality, rejection rates, and regional harvest distribution across all database records."
+)
+async def get_national_onion_intelligence_summary(
+    db: AsyncSession = Depends(get_async_db)
+):
+    return await InspectionRepository.get_national_intelligence_summary(db)
 
 @router.get(
     "/analytics/summary",

@@ -7,12 +7,17 @@ from .config import settings
 from .routes.inspection import router as inspection_router
 from .routes.reports import router as reports_router
 
+from .db import init_db, close_db
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: ensure upload directory is ready
+    # Startup: ensure upload directory is ready and database schema is initialized
     settings.UPLOAD_PATH.mkdir(parents=True, exist_ok=True)
+    await init_db()
     yield
-    # Shutdown logic if any
+    # Shutdown: cleanly close database connection pool
+    await close_db()
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
