@@ -12,11 +12,13 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { useInspection } from '../context/InspectionContext';
+import { useTranslation } from 'react-i18next';
 import { GeographicRegion, SamplePreset } from '../types';
 import { SAMPLE_PRESETS } from '../data/mockData';
 import { OnionVisualView } from './OnionVisualView';
 
 export const InspectionCapture: React.FC = () => {
+  const { t } = useTranslation();
   const { 
     selectedRegion, 
     setSelectedRegion, 
@@ -316,7 +318,7 @@ export const InspectionCapture: React.FC = () => {
           id="capture-image-btn"
         >
           <Camera className="w-4 h-4" />
-          <span>Capture Image & Analyze</span>
+          <span>{t('captureImage')}</span>
         </button>
 
         {/* Alternative "Upload from Gallery" Button */}
@@ -326,7 +328,7 @@ export const InspectionCapture: React.FC = () => {
           id="upload-gallery-btn"
         >
           <Upload className="w-3.5 h-3.5 text-sky-400" />
-          <span>Upload from Gallery</span>
+          <span>{t('uploadImage')}</span>
         </button>
       </div>
     </div>

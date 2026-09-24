@@ -19,6 +19,7 @@ import {
   FileCheck
 } from 'lucide-react';
 import { useInspection } from '../context/InspectionContext';
+import { useTranslation } from 'react-i18next';
 import { TRANSLATIONS } from '../data/translations';
 import { 
   fetchDatasetStats, 
@@ -37,7 +38,7 @@ export const HomeScreen: React.FC = () => {
     language 
   } = useInspection();
 
-  const t = TRANSLATIONS[language];
+  const { t } = useTranslation();
 
   // Admin Dataset Export Widget States
   const [datasetStats, setDatasetStats] = useState<DatasetStatsResponse | null>(null);
@@ -148,7 +149,7 @@ export const HomeScreen: React.FC = () => {
             <div className="w-6 h-6 rounded-lg bg-black/15 flex items-center justify-center group-hover:scale-110 transition">
               <ScanLine className="w-4 h-4 text-slate-950" />
             </div>
-            <span>Start New Inspection</span>
+            <span>{t('startNewInspection')}</span>
           </button>
         </div>
       </div>
@@ -158,10 +159,10 @@ export const HomeScreen: React.FC = () => {
         <div className="flex items-center justify-between text-xs mb-3">
           <span className="font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
             <Award className="w-4 h-4 text-emerald-400" />
-            Daily Mandi Quality Summary
+            {t('dailySummary')}
           </span>
           <span className="text-[10.5px] font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-800/40">
-            Live Yard Data
+            {t('liveYardData')}
           </span>
         </div>
 
@@ -169,7 +170,7 @@ export const HomeScreen: React.FC = () => {
           {/* Total Inspections Today */}
           <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">
-              Total Inspections Today
+              {t('totalInspections')}
             </span>
             <div className="flex items-baseline gap-1 mt-1">
               <span className="text-2xl font-black text-white font-sans">
@@ -185,7 +186,7 @@ export const HomeScreen: React.FC = () => {
           {/* Average Grade A % */}
           <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">
-              Average Grade A %
+              {t('averageGradeAPercent')}
             </span>
             <div className="flex items-baseline gap-1 mt-1">
               <span className="text-2xl font-black text-emerald-400 font-sans">
@@ -208,7 +209,7 @@ export const HomeScreen: React.FC = () => {
         <div className="flex items-center justify-between text-xs">
           <span className="font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
             <Database className="w-4 h-4 text-emerald-400" />
-            Continuous Learning Pipeline
+            {t('continuousLearning')}
           </span>
           <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-800/60">
             Admin Pipeline • X-Admin-Token
@@ -219,7 +220,7 @@ export const HomeScreen: React.FC = () => {
         <div className="p-3.5 rounded-xl bg-slate-800/80 border border-slate-700/70 flex items-center justify-between gap-3">
           <div>
             <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wide block">
-              Human-Verified Samples Ready for Training
+              {t('verifiedForTraining')}
             </span>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-3xl font-black text-emerald-400 font-mono" id="verified-samples-count">
@@ -291,12 +292,12 @@ export const HomeScreen: React.FC = () => {
           {isExporting ? (
             <>
               <RefreshCw className="w-4 h-4 animate-spin text-white" />
-              <span>Packaging Retraining Dataset (.zip)...</span>
+              <span>{t('packagingDataset')}</span>
             </>
           ) : (
             <>
               <FileArchive className="w-4 h-4 text-emerald-200" />
-              <span>Export Retraining Dataset (.zip)</span>
+              <span>{t('exportRetrainingDataset')}</span>
             </>
           )}
         </button>
@@ -307,14 +308,14 @@ export const HomeScreen: React.FC = () => {
         <div className="flex items-center justify-between text-xs">
           <span className="font-bold text-white tracking-wide uppercase flex items-center gap-1.5">
             <Layers className="w-3.5 h-3.5 text-emerald-400" />
-            Recent Inspections
+            {t('recentReports')}
           </span>
           <button
             onClick={() => setCurrentScreen('reports')}
             className="text-[11px] text-emerald-400 font-semibold hover:underline flex items-center gap-0.5"
             id="see-all-reports-btn"
           >
-            <span>View All ({reports.length})</span>
+            <span>{t('viewAll')} ({reports.length})</span>
             <ChevronRight className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -322,7 +323,7 @@ export const HomeScreen: React.FC = () => {
         <div className="space-y-2">
           {reports.length === 0 ? (
             <div className="p-6 text-center text-slate-500 bg-slate-800/40 rounded-xl border border-slate-700/50">
-              <p className="text-xs">No certified inspections found. Start your first lot inspection.</p>
+              <p className="text-xs">{t('noInspectionsFound')}</p>
             </div>
           ) : (
             reports.slice(0, 5).map((report) => {

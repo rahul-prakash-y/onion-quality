@@ -15,6 +15,8 @@ import { useInspection } from '../context/InspectionContext';
 import { PROCUREMENT_CENTERS } from '../data/mockData';
 import { TRANSLATIONS } from '../data/translations';
 
+import { LanguageToggle } from './LanguageToggle';
+
 interface AppShellProps {
   children: React.ReactNode;
 }
@@ -93,15 +95,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             {/* Right side controls */}
             <div className="flex items-center gap-1.5 shrink-0">
               {/* Language Switcher */}
-              <button
-                onClick={toggleLanguage}
-                className="flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg bg-slate-800/90 text-slate-300 hover:text-white border border-slate-700/60 hover:border-emerald-500/40 transition active:scale-95"
-                title="Toggle Language"
-                id="shell-language-toggle"
-              >
-                <Globe2 className="w-3.5 h-3.5 text-emerald-400" />
-                <span>{language === 'en' ? 'हिन्दी' : 'EN'}</span>
-              </button>
+              <LanguageToggle id="shell-language-toggle" />
 
               {/* Desktop Frame Toggle */}
               <button
@@ -174,7 +168,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             <div className={`p-1 rounded-lg ${currentScreen === 'home' ? 'bg-emerald-500/20' : ''}`}>
               <Home className="w-5 h-5" />
             </div>
-            <span className="text-[10px] tracking-tight">Home</span>
+            <span className="text-[10px] tracking-tight">{t.home || 'Home'}</span>
           </button>
 
           {/* 2. New Inspection Tab (Prominent Styled Center CTA) */}
@@ -193,7 +187,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             <span className={`text-[10px] font-bold tracking-tight ${
               currentScreen === 'inspection' ? 'text-emerald-400' : 'text-slate-300'
             }`}>
-              New Inspection
+              {t.inspection || 'New Inspection'}
             </span>
           </button>
 
@@ -216,7 +210,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                 </span>
               )}
             </div>
-            <span className="text-[10px] tracking-tight">Reports</span>
+            <span className="text-[10px] tracking-tight">{t.reports || 'Reports'}</span>
           </button>
         </nav>
       </div>

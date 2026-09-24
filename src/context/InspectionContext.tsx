@@ -23,6 +23,7 @@ import {
   dataURLtoBlob, 
   createSampleImageBlob 
 } from '../services/api';
+import i18n from '../i18n';
 
 interface InspectionContextType {
   // Screen and basic settings
@@ -30,6 +31,7 @@ interface InspectionContextType {
   setCurrentScreen: (screen: ActiveScreen) => void;
   language: Language;
   toggleLanguage: () => void;
+  setLanguage: (lang: Language) => void;
   isMobileFrame: boolean;
   toggleMobileFrame: () => void;
   selectedCenter: ProcurementCenter;
@@ -76,7 +78,9 @@ const InspectionContext = createContext<InspectionContextType | undefined>(undef
 
 export const InspectionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentScreen, setCurrentScreen] = useState<ActiveScreen>('home');
-  const [language, setLanguage] = useState<Language>('en');
+  const [language, setLanguageState] = useState<Language>(() => {
+    return (i18n.language?.startsWith('hi') ? 'hi' : 'en') as Language;
+  });
   const [isMobileFrame, setIsMobileFrame] = useState(true);
   const [selectedCenter, setSelectedCenter] = useState<ProcurementCenter>(PROCUREMENT_CENTERS[0]);
 
@@ -228,9 +232,28 @@ export const InspectionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setIsSyncing(false);
   };
 
-  const toggleLanguage = () => {
-    setLanguage((prev) => (prev === 'en' ? 'hi' : 'en'));
-  };
+  const setLanguage = useCallback((newLang: Language) => {
+    setLanguageState(newLang);
+    i18n.changeLanguage(newLang);
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem('onionvision_language', newLang);
+    }
+  }, []);
+
+  const toggleLanguage = useCallback(() => {
+    setLanguage(language === 'en' ? 'hi' : 'en');
+  }, [language, setLanguage]);
+
+  useEffect(() => {
+    const handleLanguageChanged = (lng: string) => {
+      const normalized = (lng?.startsWith('hi') ? 'hi' : 'en') as Language;
+      setLanguageState(normalized);
+    };
+    i18n.on('languageChanged', handleLanguageChanged);
+    return () => {
+      i18n.off('languageChanged', handleLanguageChanged);
+    };
+  }, []);
 
   const toggleMobileFrame = () => {
     setIsMobileFrame((prev) => !prev);
@@ -243,6 +266,7 @@ export const InspectionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         setCurrentScreen,
         language,
         toggleLanguage,
+        setLanguage,
         isMobileFrame,
         toggleMobileFrame,
         selectedCenter,

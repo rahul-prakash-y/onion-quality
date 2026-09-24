@@ -23,9 +23,11 @@ import {
   Check
 } from 'lucide-react';
 import { useInspection } from '../context/InspectionContext';
+import { useTranslation } from 'react-i18next';
 import { DigitalCertificate } from '../types';
 
 export const DigitalQualityReportScreen: React.FC = () => {
+  const { t } = useTranslation();
   const { 
     currentBatchId, 
     selectedRegion, 
@@ -523,7 +525,7 @@ export const DigitalQualityReportScreen: React.FC = () => {
           ) : (
             <>
               <Download className="w-4 h-4 text-sky-400" />
-              <span>Download PDF Quality Certificate</span>
+              <span>{t('downloadPdf')}</span>
             </>
           )}
         </button>

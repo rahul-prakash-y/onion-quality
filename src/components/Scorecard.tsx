@@ -175,7 +175,7 @@ export const Scorecard: React.FC<ScorecardProps> = ({
           {/* Grade A */}
           <div className="p-2 rounded-xl bg-emerald-950/30 border border-emerald-900/50">
             <span className="text-[10px] uppercase font-semibold text-emerald-400 block">
-              Grade A
+              {t.gradeA || 'Grade A'}
             </span>
             <span className="text-lg font-bold text-white font-sans">
               {summary.gradeAPercent}%
@@ -188,7 +188,7 @@ export const Scorecard: React.FC<ScorecardProps> = ({
           {/* Grade B */}
           <div className="p-2 rounded-xl bg-amber-950/30 border border-amber-900/50">
             <span className="text-[10px] uppercase font-semibold text-amber-400 block">
-              Grade B
+              {t.gradeB || 'Grade B'}
             </span>
             <span className="text-lg font-bold text-white font-sans">
               {summary.gradeBPercent}%
@@ -201,7 +201,7 @@ export const Scorecard: React.FC<ScorecardProps> = ({
           {/* URS */}
           <div className="p-2 rounded-xl bg-rose-950/30 border border-rose-900/50">
             <span className="text-[10px] uppercase font-semibold text-rose-400 block">
-              URS Rejects
+              {t.ursRejects || t.urs || 'URS Rejects'}
             </span>
             <span className="text-lg font-bold text-white font-sans">
               {summary.ursPercent}%
@@ -269,7 +269,7 @@ export const Scorecard: React.FC<ScorecardProps> = ({
           <div className="p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-blue-400" />
-              <span className="text-slate-300 font-medium">Cut / Double</span>
+              <span className="text-slate-300 font-medium">{t.cutOrDouble || 'Cut / Double'}</span>
             </div>
             <span className={`font-bold font-mono px-1.5 py-0.5 rounded text-xs ${
               (summary.defects.mechanicalCut + summary.defects.doubleOrDeformed) > 0 ? 'bg-blue-900/60 text-blue-300' : 'text-slate-500'

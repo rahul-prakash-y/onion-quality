@@ -10,13 +10,14 @@ import {
 } from 'lucide-react';
 import { ProcurementCenter, Language } from '../types';
 import { TRANSLATIONS } from '../data/translations';
+import { LanguageToggle } from './LanguageToggle';
 
 interface HeaderProps {
   centers: ProcurementCenter[];
   selectedCenter: ProcurementCenter;
   onSelectCenter: (center: ProcurementCenter) => void;
   language: Language;
-  onToggleLanguage: () => void;
+  onToggleLanguage?: () => void;
   isMobileFrame: boolean;
   onToggleMobileFrame: () => void;
 }
@@ -62,15 +63,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Right side controls */}
         <div className="flex items-center gap-1.5 shrink-0">
           {/* Language Toggle */}
-          <button
-            onClick={onToggleLanguage}
-            className="flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg bg-slate-800/90 text-slate-300 hover:text-white border border-slate-700/60 hover:border-emerald-500/40 transition active:scale-95"
-            title="Toggle Language"
-            id="language-toggle-btn"
-          >
-            <Globe2 className="w-3.5 h-3.5 text-emerald-400" />
-            <span>{language === 'en' ? 'हिन्दी' : 'EN'}</span>
-          </button>
+          <LanguageToggle id="language-toggle-btn" />
 
           {/* Device Mockup Toggle (visible on screens >= md) */}
           <button

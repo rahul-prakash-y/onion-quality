@@ -22,6 +22,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { useInspection } from '../context/InspectionContext';
+import { useTranslation } from 'react-i18next';
 import { useSync } from '../context/SyncContext';
 import { 
   submitHumanVerification, 
@@ -37,6 +38,7 @@ import { OnionDetection, DefectType, GradeClassification } from '../types';
 import confetti from 'canvas-confetti';
 
 export const AIAnalysisResults: React.FC = () => {
+  const { t } = useTranslation();
   const { 
     activeDetections, 
     setActiveDetections, 
@@ -545,19 +547,19 @@ export const AIAnalysisResults: React.FC = () => {
 
         {/* Legend bar */}
         <div className="flex items-center justify-between text-[10px] text-slate-400 bg-slate-900/60 p-2 rounded-xl border border-slate-800">
-          <span className="font-semibold text-slate-300">Color Legend:</span>
+          <span className="font-semibold text-slate-300">{t('colorLegend')}:</span>
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-              Healthy
+              {t('healthy')}
             </span>
             <span className="flex items-center gap-1">
               <span className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
-              Sprouted
+              {t('sprouted')}
             </span>
             <span className="flex items-center gap-1">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-              Rotten/Damaged
+              {t('rotten')} / {t('damaged')}
             </span>
           </div>
         </div>
@@ -633,13 +635,13 @@ export const AIAnalysisResults: React.FC = () => {
           {/* Estimated URS % */}
           <div className="p-3 rounded-2xl bg-rose-950/40 border border-rose-500/40 text-center">
             <span className="text-[10.5px] uppercase font-bold text-rose-400 block tracking-wide">
-              Estimated URS %
+              {t('urs')} %
             </span>
             <div className="text-3xl font-black text-rose-300 font-sans mt-0.5">
               {currentSummary.ursPercent}%
             </div>
             <span className="text-[9.5px] text-slate-400 block mt-0.5">
-              Reject Specification
+              {t('ursRejects')}
             </span>
           </div>
         </div>
@@ -650,7 +652,7 @@ export const AIAnalysisResults: React.FC = () => {
         <div className="flex items-center justify-between text-xs">
           <span className="font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
             <AlertTriangle className="w-4 h-4 text-amber-400" />
-            Identified Defect Breakdown
+            {t('defectBreakdown')}
           </span>
           <span className="text-[10px] text-slate-400 font-mono">
             {total} Specimen Sampled
@@ -662,7 +664,7 @@ export const AIAnalysisResults: React.FC = () => {
           <div className="p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60 flex items-center justify-between">
             <div>
               <span className="text-slate-400 text-[10px] uppercase font-semibold block">
-                Damaged (Cuts)
+                {t('damaged')}
               </span>
               <span className="text-base font-bold text-blue-300">
                 {damagedCount} <span className="text-[11px] font-normal text-slate-400">({damagedPercent}%)</span>
@@ -675,7 +677,7 @@ export const AIAnalysisResults: React.FC = () => {
           <div className="p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60 flex items-center justify-between">
             <div>
               <span className="text-slate-400 text-[10px] uppercase font-semibold block">
-                Rotten & Mould
+                {t('rotten')}
               </span>
               <span className="text-base font-bold text-rose-400">
                 {rottenCount} <span className="text-[11px] font-normal text-slate-400">({rottenPercent}%)</span>
@@ -688,7 +690,7 @@ export const AIAnalysisResults: React.FC = () => {
           <div className="p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60 flex items-center justify-between">
             <div>
               <span className="text-slate-400 text-[10px] uppercase font-semibold block">
-                Sprouted Shoots
+                {t('sprouted')}
               </span>
               <span className="text-base font-bold text-yellow-300">
                 {sproutedCount} <span className="text-[11px] font-normal text-slate-400">({sproutedPercent}%)</span>
@@ -701,7 +703,7 @@ export const AIAnalysisResults: React.FC = () => {
           <div className="p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60 flex items-center justify-between">
             <div>
               <span className="text-slate-400 text-[10px] uppercase font-semibold block">
-                Undersized (&lt;45mm)
+                {t('undersized')} (&lt;45mm)
               </span>
               <span className="text-base font-bold text-amber-400">
                 {undersizedCount} <span className="text-[11px] font-normal text-slate-400">({undersizedPercent}%)</span>
@@ -717,7 +719,7 @@ export const AIAnalysisResults: React.FC = () => {
         <div className="flex items-center justify-between text-xs">
           <span className="font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            Human Verification Step (Continual Learning)
+            {t('humanVerificationTitle')}
           </span>
           <span className="text-[9.5px] font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-800/40">
             Active Learning Loop
@@ -726,10 +728,10 @@ export const AIAnalysisResults: React.FC = () => {
 
         <div className="p-3 rounded-2xl bg-slate-800/50 border border-slate-700/60">
           <p className="text-xs font-semibold text-slate-200">
-            Do these results look accurate?
+            {t('humanVerificationQuestion')}
           </p>
           <p className="text-[10.5px] text-slate-400 mt-1 leading-relaxed">
-            Your verification verifies quality standards and feeds edge model weights for continuous regional adaptation.
+            {t('humanVerificationSubtitle')}
           </p>
         </div>
 
@@ -745,12 +747,12 @@ export const AIAnalysisResults: React.FC = () => {
             {isSubmitting ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Verifying...</span>
+                <span>{t('verifyingShort')}</span>
               </>
             ) : (
               <>
                 <ThumbsUp className="w-4 h-4" />
-                <span>Approve Results</span>
+                <span>{t('verifyAndApprove')}</span>
               </>
             )}
           </button>
@@ -763,7 +765,7 @@ export const AIAnalysisResults: React.FC = () => {
             id="edit-flag-results-btn"
           >
             <Flag className="w-4 h-4" />
-            <span>Edit / Flag</span>
+            <span>{t('editFlag')}</span>
           </button>
         </div>
       </div>
