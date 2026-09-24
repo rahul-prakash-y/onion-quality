@@ -126,6 +126,17 @@ async def upload_inspection_image(
         metadata=metadata
     )
 
+    try:
+        from ..db.mongodb import MongoInspectionRepository
+        await MongoInspectionRepository.create_inspection(
+            inspection_id=record.inspection_id,
+            original_image_path=str(target_path),
+            geographic_source=region or "Maharashtra",
+            metadata=metadata
+        )
+    except Exception:
+        pass
+
     return UploadResponse(
         inspection_id=record.inspection_id,
         filename=record.filename,
@@ -191,6 +202,15 @@ async def analyze_inspection(
         ai_predictions=analysis.model_dump(),
         verdict=analysis.verdict
     )
+
+    try:
+        from ..db.mongodb import MongoInspectionRepository
+        await MongoInspectionRepository.update_ai_predictions(
+            inspection_id=inspection_id,
+            ai_predictions=analysis.model_dump()
+        )
+    except Exception:
+        pass
 
     return analysis
 
@@ -322,7 +342,8 @@ async def verify_inspection(
         "feedback_notes": payload.feedback_notes,
         "inspector_name": payload.inspector_name,
         "tamper_proof_hash": tamper_proof_hash,
-        "learning_delta": delta_vector
+        "learning_delta": delta_vector,
+        "detections": [d.model_dump() for d in record.analysis.detections] if record.analysis and record.analysis.detections else []
     }
     await InspectionRepository.verify_inspection(
         db=db,
@@ -332,6 +353,17 @@ async def verify_inspection(
         certificate_id=report.certificate_id,
         verdict=recalculated_summary.verdict
     )
+
+    try:
+        from ..db.mongodb import MongoInspectionRepository
+        await MongoInspectionRepository.verify_inspection(
+            inspection_id=inspection_id,
+            inspector_id=payload.inspector_id or "INS-APMC-042",
+            verified_data=verified_data_payload,
+            geographic_source=record.metadata.get("region") or "Maharashtra"
+        )
+    except Exception:
+        pass
 
     return VerificationResponse(
         inspection_id=inspection_id,

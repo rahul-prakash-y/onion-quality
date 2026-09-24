@@ -80,6 +80,14 @@ class InspectionRecordModel(Base):
         comment="Flag indicating if a human grading officer reviewed and certified this record"
     )
 
+    used_for_training: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+        index=True,
+        comment="Flag indicating if this record was extracted and used for YOLO/ViT model retraining"
+    )
+
     verified_data: Mapped[Optional[Dict[str, Any]]] = mapped_column(
         JSON,
         nullable=True,
@@ -139,6 +147,7 @@ class InspectionRecordModel(Base):
     __table_args__ = (
         Index("ix_inspections_source_verdict", "geographic_source", "verdict"),
         Index("ix_inspections_verified_timestamp", "is_human_verified", "timestamp"),
+        Index("ix_inspections_training_export", "is_human_verified", "used_for_training"),
     )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -152,6 +161,7 @@ class InspectionRecordModel(Base):
             "original_image_path": self.original_image_path,
             "ai_predictions": self.ai_predictions,
             "is_human_verified": self.is_human_verified,
+            "used_for_training": self.used_for_training,
             "verified_data": self.verified_data,
             "certificate_id": self.certificate_id,
             "lot_id": self.lot_id,
@@ -161,3 +171,4 @@ class InspectionRecordModel(Base):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None
         }
+

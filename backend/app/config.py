@@ -55,4 +55,10 @@ class Settings:
     BASE_MSP_PER_QTL: int = 2400  # INR per quintal benchmark
     GRADE_A_MIN_DIAMETER_MM: float = 50.0
 
+    # Admin Security & Dataset Pipeline Settings
+    ADMIN_TOKEN: str = os.getenv("ADMIN_TOKEN", "onionvision-admin-secret-2026")
+    DATASET_EXPORT_DIR: Path = BASE_DIR / "dataset_exports"
+
 settings = Settings()
+settings.DATASET_EXPORT_DIR.mkdir(parents=True, exist_ok=True)
+

@@ -6,17 +6,25 @@ from fastapi.responses import JSONResponse
 from .config import settings
 from .routes.inspection import router as inspection_router
 from .routes.reports import router as reports_router
+from .routes.dataset import router as dataset_router
 
 from .db import init_db, close_db
+from .db.mongodb import MongoInspectionRepository, mongo_manager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: ensure upload directory is ready and database schema is initialized
     settings.UPLOAD_PATH.mkdir(parents=True, exist_ok=True)
     await init_db()
+    try:
+        if await mongo_manager.ping():
+            await MongoInspectionRepository.ensure_indexes()
+    except Exception:
+        pass
     yield
     # Shutdown: cleanly close database connection pool
     await close_db()
+    mongo_manager.close()
 
 
 app = FastAPI(
@@ -40,6 +48,7 @@ app.add_middleware(
 # Register modular routers
 app.include_router(inspection_router)
 app.include_router(reports_router)
+app.include_router(dataset_router)
 
 @app.get(
     "/",
@@ -56,9 +65,12 @@ async def root():
             "upload_image": "POST /api/v1/inspect/upload",
             "analyze_inspection": "GET /api/v1/inspect/{inspection_id}/analyze",
             "verify_inspection": "POST /api/v1/inspect/{inspection_id}/verify",
-            "reports_history": "GET /api/v1/reports/history"
+            "reports_history": "GET /api/v1/reports/history",
+            "export_dataset": "GET /api/v1/dataset/export",
+            "dataset_stats": "GET /api/v1/dataset/stats"
         }
     }
+
 
 @app.get(
     "/health",

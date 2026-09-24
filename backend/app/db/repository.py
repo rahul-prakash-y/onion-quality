@@ -195,7 +195,49 @@ class InspectionRepository:
         return result.scalar() or 0
 
     @staticmethod
+    async def get_exportable_records(
+        db: AsyncSession,
+        region: Optional[str] = None,
+        limit: Optional[int] = None,
+        include_previously_exported: bool = False
+    ) -> List[InspectionRecordModel]:
+        """Queries verified records ready for model retraining (used_for_training == False)."""
+        query = select(InspectionRecordModel).where(
+            InspectionRecordModel.is_human_verified == True
+        )
+        if not include_previously_exported:
+            query = query.where(InspectionRecordModel.used_for_training == False)
+
+        if region:
+            query = query.where(InspectionRecordModel.geographic_source == region)
+
+        query = query.order_by(InspectionRecordModel.timestamp.asc())
+        if limit:
+            query = query.limit(limit)
+
+        result = await db.execute(query)
+        return list(result.scalars().all())
+
+    @staticmethod
+    async def mark_as_used_for_training(
+        db: AsyncSession,
+        inspection_ids: List[str]
+    ) -> int:
+        """Sets used_for_training = True for the given inspection_ids in SQLite/Postgres."""
+        if not inspection_ids:
+            return 0
+        stmt = (
+            update(InspectionRecordModel)
+            .where(InspectionRecordModel.inspection_id.in_(inspection_ids))
+            .values(used_for_training=True)
+        )
+        result = await db.execute(stmt)
+        await db.commit()
+        return result.rowcount
+
+    @staticmethod
     async def get_national_intelligence_summary(db: AsyncSession) -> Dict[str, Any]:
+
         """Computes aggregate analytics across the National Onion Intelligence Dataset."""
         total_query = select(func.count(InspectionRecordModel.id))
         verified_query = select(func.count(InspectionRecordModel.id)).where(

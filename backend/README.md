@@ -81,13 +81,73 @@ The system is architected for building a long-term **National Onion Intelligence
 | `original_image_path` | String(512) | Non-null | Filesystem path to the raw captured image |
 | `ai_predictions` | JSON / JSONB | Nullable | Counts (`healthy`, `damaged`, `rotten`, `sprouted`, `undersized`), percentages (`Grade A`, `URS`), verdict, score, detections |
 | `is_human_verified` | Boolean | Indexed, Non-null, Default=False | Human-in-the-loop review flag |
+| `used_for_training` | Boolean | Indexed, Non-null, Default=False | Indicates whether record has been exported for YOLO/ViT retraining |
 | `verified_data` | JSON / JSONB | Nullable | Human-corrected counts, recalculated percentages, notes, learning deltas |
 | `certificate_id` | String(64) | Unique, Indexed, Nullable | APMC digital certificate ID |
 | `lot_id` | String(64) | Indexed, Nullable | Mandi lot batch tracking number |
 | `verdict` | String(32) | Indexed, Nullable | `APPROVED_GRADE_A`, `CONDITIONAL_GRADE_B`, `REJECTED_URS` |
 
-
 ---
+
+## 📦 National Onion Intelligence Dataset: Model Retraining Pipeline
+
+The data extraction pipeline allows continuous retraining of YOLOv8/v11 and Vision Transformer defect detection models using real-world, human-verified inspections from the MongoDB database.
+
+### 1. HTTP Endpoint: `GET /api/v1/dataset/export`
+Secured via administrator security token (`settings.ADMIN_TOKEN`, default: `onionvision-admin-secret-2026`).
+
+**Authentication Options:**
+- Header: `X-Admin-Token: onionvision-admin-secret-2026`
+- Header: `Authorization: Bearer onionvision-admin-secret-2026`
+- Query: `?admin_token=onionvision-admin-secret-2026`
+
+**Query Parameters:**
+- `format`: `yolo` (default) or `coco`
+- `region`: Optional filter (e.g. `Maharashtra`, `Karnataka`, `Gujarat`)
+- `dry_run`: `true` to inspect/export without updating database state (default: `false`)
+- `include_previously_exported`: `true` to include historical records already marked as `used_for_training=True`
+- `limit`: Optional maximum number of inspections to export
+
+**Example Request:**
+```bash
+curl -H "X-Admin-Token: onionvision-admin-secret-2026" \
+  "http://localhost:8000/api/v1/dataset/export?format=yolo" \
+  --output national_onion_dataset.zip
+```
+
+### 2. Standalone Python CLI: `export_dataset.py`
+A data engineering CLI script is available for batch retraining workflows:
+
+```bash
+# Export unexported human-verified records into standard YOLO dataset
+python export_dataset.py --format yolo --output national_onion_dataset.zip
+
+# Filter specifically for Maharashtra APMC Mandis in dry-run mode
+python export_dataset.py --region Maharashtra --dry-run
+
+# Seed realistic verified samples into MongoDB for testing
+python export_dataset.py --seed-sample-data
+```
+
+### 3. Output Archive Directory Structure
+The resulting `.zip` is partitioned cleanly by geographic provenance:
+```
+national_onion_dataset/
+  ├── data.yaml                     # Ultralytics YOLO dataset configuration
+  ├── classes.txt                   # List of 5 canonical defect classes
+  ├── dataset_metadata.json         # Provenance manifest & class distributions
+  ├── annotations_coco.json         # Standard COCO JSON annotations
+  ├── README.md                     # Model training quickstart guide
+  ├── Maharashtra/                  # State-level partition
+  │   ├── images/                   # High-res raw inspection images
+  │   │   ├── insp_ma_001.jpg
+  │   └── labels/                   # YOLO normalized bounding box .txt files
+  │       ├── insp_ma_001.txt
+  └── Karnataka/
+      ├── images/
+      └── labels/
+```
+
 
 ## 🛠️ Quickstart & Setup
 
