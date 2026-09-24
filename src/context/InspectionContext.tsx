@@ -66,7 +66,7 @@ interface InspectionContextType {
   humanVerification: HumanVerificationRecord;
   setHumanVerification: React.Dispatch<React.SetStateAction<HumanVerificationRecord>>;
   analyzingStepIndex: number;
-  startAnalysisFlow: (imageInput?: File | Blob | string | null) => Promise<void>;
+  startAnalysisFlow: (imageInput?: File | Blob | string | null, preUploadedInspectionId?: string) => Promise<void>;
 
   // Module 5 Reports & Cloud Sync
   reports: DigitalCertificate[];
@@ -199,14 +199,15 @@ export const InspectionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
    * 4. Calls GET /api/v1/inspect/{id}/analyze to obtain real AI inference results.
    * 5. Transitions to results screen using real bounding box detections and APMC summary.
    */
-  const startAnalysisFlow = async (imageInput?: File | Blob | string | null) => {
+  const startAnalysisFlow = async (
+    imageInput?: File | Blob | string | null,
+    preUploadedInspectionId?: string
+  ) => {
     setInspectionStep('analyzing');
     setAnalyzingStepIndex(0); // Step 0: "Detecting individual onions..."
 
-    // Demo Mode Bypass Logic:
-    // 1. Bypass the live device camera and automatically load a high-quality, pre-selected "perfect" onion sample image from the public/assets folder.
-    // 2. Skip the backend network delay by mocking a 1-second loading screen before displaying a hardcoded, highly accurate AI prediction state with perfect bounding box coordinates.
-    if (isDemoMode) {
+    // Demo Mode Bypass Logic (only if demo mode is enabled AND no real image/blob was provided):
+    if (isDemoMode && !imageInput && !preUploadedInspectionId) {
       setCapturedImage(DEMO_SAMPLE_IMAGE);
 
       // Mock 1-second loading screen across progressive stage indicators (330ms + 340ms + 330ms = 1000ms)
@@ -229,29 +230,34 @@ export const InspectionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
 
     try {
-      // 1. Resolve image blob for multipart upload
-      let imageBlob: Blob;
-      const targetInput = imageInput || capturedImage;
+      let serverId = preUploadedInspectionId;
 
-      if (targetInput instanceof File || targetInput instanceof Blob) {
-        imageBlob = targetInput;
-      } else if (typeof targetInput === 'string' && targetInput.startsWith('data:')) {
-        imageBlob = dataURLtoBlob(targetInput);
-      } else {
-        // Generate valid in-memory tray image for optical capture simulation
-        imageBlob = await createSampleImageBlob(`Sample Tray ${currentBatchId} (${selectedRegion})`);
+      if (!serverId) {
+        // 1. Resolve image blob for multipart upload
+        let imageBlob: Blob;
+        const targetInput = imageInput || capturedImage;
+
+        if (targetInput instanceof File || targetInput instanceof Blob) {
+          imageBlob = targetInput;
+        } else if (typeof targetInput === 'string' && targetInput.startsWith('data:')) {
+          imageBlob = dataURLtoBlob(targetInput);
+        } else {
+          // Generate valid in-memory tray image for optical capture simulation
+          imageBlob = await createSampleImageBlob(`Sample Tray ${currentBatchId} (${selectedRegion})`);
+        }
+
+        // Step 1: Upload image to live backend
+        const uploadRes = await uploadInspectionImage(imageBlob, {
+          batchId: currentBatchId,
+          region: selectedRegion,
+          variety: activePreset.variety || 'Bhima Super (Nashik Red)',
+          farmerName: activePreset.farmerName || 'Rameshwar Patil',
+          presetHint: activePreset.id,
+        });
+
+        serverId = uploadRes.inspectionId || uploadRes.inspection_id;
       }
 
-      // Step 1: Upload image to live backend
-      const uploadRes = await uploadInspectionImage(imageBlob, {
-        batchId: currentBatchId,
-        region: selectedRegion,
-        variety: activePreset.variety || 'Bhima Super (Nashik Red)',
-        farmerName: activePreset.farmerName || 'Rameshwar Patil',
-        presetHint: activePreset.id,
-      });
-
-      const serverId = uploadRes.inspectionId || uploadRes.inspection_id;
       setCurrentInspectionId(serverId);
       console.log(`[InspectionFlow] Image uploaded successfully. Server Inspection ID: ${serverId}`);
 
