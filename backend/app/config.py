@@ -22,10 +22,17 @@ class Settings:
     # Database Configurations
     # Production PostgreSQL: "postgresql+asyncpg://postgres:postgres@localhost:5432/onionvision_db"
     # Local Async SQLite fallback: "sqlite+aiosqlite:///./onionvision.db"
-    DATABASE_URL: str = os.getenv(
+    _raw_db_url: str = os.getenv(
         "DATABASE_URL",
         f"sqlite+aiosqlite:///{BASE_DIR / 'onionvision.db'}"
-    )
+    ).strip()
+    if _raw_db_url.startswith("postgres://"):
+        _raw_db_url = _raw_db_url.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif _raw_db_url.startswith("postgresql://") and not _raw_db_url.startswith("postgresql+"):
+        _raw_db_url = _raw_db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+    DATABASE_URL: str = _raw_db_url
+
     # Optional MongoDB Motor URI
     MONGODB_URI: str = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
     MONGODB_DB_NAME: str = os.getenv("MONGODB_DB_NAME", "national_onion_intelligence")
@@ -42,14 +49,25 @@ class Settings:
     ]
     
     # CORS Origins - Allowed to accept requests from ReactJS/Vite frontends
-    CORS_ORIGINS: List[str] = [
+    _cors_env: str = os.getenv("CORS_ORIGINS", "")
+    _cors_parsed: List[str] = []
+    if _cors_env:
+        for _item in _cors_env.split(","):
+            _cleaned = _item.strip()
+            if _cleaned:
+                _cors_parsed.append(_cleaned)
+                if not _cleaned.startswith("http://") and not _cleaned.startswith("https://") and _cleaned != "*":
+                    _cors_parsed.append(f"https://{_cleaned}")
+                    _cors_parsed.append(f"http://{_cleaned}")
+
+    CORS_ORIGINS: List[str] = list(dict.fromkeys([
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://localhost:8080",
         "*"
-    ]
+    ] + _cors_parsed))
     
     # Agricultural Mandi / APMC Defaults
     BASE_MSP_PER_QTL: int = 2400  # INR per quintal benchmark

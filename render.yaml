@@ -1,0 +1,65 @@
+# ==============================================================================
+# OnionVision AI - Render Blueprint Specification (Infrastructure-as-Code)
+# ==============================================================================
+# Deploys:
+#   1. PostgreSQL Managed Database (type: psql / databases)
+#   2. FastAPI Backend Web Service (Python 3.11 + Uvicorn + SQLAlchemy)
+#   3. React / Vite Frontend Static Site (SPA routing + automated CDN)
+# ==============================================================================
+
+databases:
+  - name: onionvision-db
+    databaseName: onionvision
+    user: onionvision_user
+    plan: free
+    region: oregon
+
+services:
+  # ---------------------------------------------------------------------------
+  # 1. Backend Web Service (FastAPI / Python)
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: onionvision-backend
+    runtime: python
+    rootDir: backend
+    plan: free
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port 10000
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: onionvision-db
+          property: connectionString
+      - key: CORS_ORIGINS
+        fromService:
+          type: static
+          name: onionvision-frontend
+          property: host
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: PORT
+        value: 10000
+      - key: ADMIN_TOKEN
+        generateValue: true
+
+  # ---------------------------------------------------------------------------
+  # 2. Frontend Static Site (React / Vite)
+  # ---------------------------------------------------------------------------
+  - type: static
+    name: onionvision-frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        fromService:
+          type: web
+          name: onionvision-backend
+          property: host
+      - key: NODE_VERSION
+        value: 20.18.0

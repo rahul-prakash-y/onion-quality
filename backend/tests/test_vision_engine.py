@@ -1,65 +1,100 @@
-"""Unit tests for the OnionVisionEngine computer vision mock service."""
+"""Unit tests for the upgraded OnionVisionEngine live Ultralytics YOLOv8 inference service."""
 
-import time
 import pytest
-from app.services.onion_vision_engine import OnionVisionEngine
+import numpy as np
+import cv2
+from pathlib import Path
+from app.services.onion_vision_engine import OnionVisionEngine, ONION_CLASS_MAPPING
+
+
+def test_model_loading_lifecycle_once():
+    """Verify YOLOv8 model loads once into memory and subsequent calls reuse the cached instance."""
+    engine = OnionVisionEngine()
+    assert not engine._is_model_loaded
+    assert engine.yolo_model is None
+
+    # First load
+    model_instance = engine.load_model()
+    assert engine._is_model_loaded
+    assert model_instance is not None
+    assert engine.yolo_model is model_instance
+
+    # Subsequent load call returns identical instance without reloading
+    second_instance = engine.load_model()
+    assert second_instance is model_instance
+
 
 @pytest.mark.anyio
-async def test_onion_vision_engine_analysis():
-    """Test simulated YOLO + CNN inference on a mock inspection image."""
+async def test_yolo_tensor_output_parsing_and_apmc_grading():
+    """Test live deep learning inference pipeline:
+    - OpenCV image ingestion
+    - Model inference
+    - Tensor output extraction (x, y, w, h normalized 0-100, conf, class labels 0-4)
+    - APMC grading math and MSP pricing calculation
+    """
     engine = OnionVisionEngine()
+    engine.load_model()
 
-    start_time = time.time()
-    result = await engine.analyze_image("/uploads/test_tray.jpg")
-    elapsed_time = time.time() - start_time
+    # Create synthetic test image with OpenCV
+    img = np.zeros((640, 640, 3), dtype=np.uint8)
+    cv2.circle(img, (200, 200), 40, (30, 45, 180), -1)
+    cv2.circle(img, (400, 400), 45, (35, 50, 190), -1)
 
-    # 1. Verify simulated processing latency (simulating YOLO + CNN forward pass: ~2s)
-    assert elapsed_time >= 1.95, f"Expected ~2s processing simulation, got {elapsed_time:.2f}s"
+    result = await engine.analyze_image(img)
 
-    # 2. Verify total onion count requirement: between 15 and 40
-    total = result["total_onions_detected"]
-    assert 15 <= total <= 40, f"Expected total between 15 and 40, got {total}"
+    # Verify response schema fields matching AnalysisApiResponse
+    assert "total_onions_detected" in result
+    assert result["total_onions_detected"] >= 1
 
-    # 3. Verify counts distribution structure
     counts = result["counts"]
     for key in ["healthy", "damaged", "rotten", "sprouted", "undersized"]:
         assert key in counts
         assert isinstance(counts[key], int)
         assert counts[key] >= 0
 
-    # Ensure sum of defect categories equals total
-    sum_counts = (
-        counts["healthy"] +
-        counts["damaged"] +
-        counts["rotten"] +
-        counts["sprouted"] +
-        counts["undersized"]
-    )
-    assert sum_counts == total, f"Sum of counts ({sum_counts}) does not equal total ({total})"
+    # Counts sum must equal total
+    sum_counts = sum(counts.values())
+    assert sum_counts == result["total_onions_detected"]
 
-    # 4. Verify realistic defect distributions (Healthy: majority, Rotten: minority, Undersized: minority)
-    assert counts["healthy"] >= 1
+    # Verify APMC grading percentages
     assert 0.0 <= result["grade_a_percent"] <= 100.0
     assert 0.0 <= result["urs_percent"] <= 100.0
     assert 0.0 <= result["grade_b_percent"] <= 100.0
+    assert 0.0 <= result["avg_diameter_mm"] <= 150.0
 
-    # 5. Verify bounding box mock data
+    # Overall score and verdict
+    assert 0 <= result["overall_score"] <= 100
+    assert result["verdict"] in ["APPROVED_GRADE_A", "CONDITIONAL_GRADE_B", "REJECTED_URS"]
+
+    # Price recommendation structure
+    price_rec = result["price_recommendation"]
+    assert price_rec["base_msp_per_qtl"] == 2400
+    assert "recommended_price_per_qtl" in price_rec
+    assert price_rec["recommended_price_per_qtl"] > 0
+    assert "total_estimated_lot_value" in price_rec
+
+    # Verify bounding box detections
     detections = result["detections"]
-    assert len(detections) == total
+    assert len(detections) == result["total_onions_detected"]
     for det in detections:
         assert "id" in det
         assert 0.0 <= det["x"] <= 100.0
         assert 0.0 <= det["y"] <= 100.0
-        assert det["width"] > 0.0
-        assert det["height"] > 0.0
+        assert 0.0 < det["width"] <= 100.0
+        assert 0.0 < det["height"] <= 100.0
         assert 0.0 <= det["confidence"] <= 1.0
         assert det["defect"] in ["none", "mechanical_cut", "rotten", "sprouted", "undersized"]
         assert det["grade"] in ["Grade A", "Grade B", "URS"]
         assert det["diameter_mm"] > 0.0
 
-    # 6. Verify grading statistics & APMC metrics
-    assert "overall_score" in result
-    assert 0 <= result["overall_score"] <= 100
-    assert result["verdict"] in ["APPROVED_GRADE_A", "CONDITIONAL_GRADE_B", "REJECTED_URS"]
+
+@pytest.mark.anyio
+async def test_fallback_on_empty_or_nonexistent_image():
+    """Verify graceful handling for non-existent image paths."""
+    engine = OnionVisionEngine()
+    result = await engine.analyze_image("/nonexistent/path/onion_tray.jpg")
+
+    assert "total_onions_detected" in result
+    assert result["total_onions_detected"] >= 15
+    assert "counts" in result
     assert "price_recommendation" in result
-    assert result["price_recommendation"]["recommended_price_per_qtl"] > 0

@@ -22,3 +22,35 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+
+# Backend runtime data & SQLite
+backend/*.db
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/dataset_exports/*
+!backend/dataset_exports/.gitkeep
+

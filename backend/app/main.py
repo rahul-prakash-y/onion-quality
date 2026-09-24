@@ -10,6 +10,7 @@ from .routes.dataset import router as dataset_router
 
 from .db import init_db, close_db
 from .db.mongodb import MongoInspectionRepository, mongo_manager
+from .services.onion_vision_engine import onion_vision_engine
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -21,6 +22,10 @@ async def lifespan(app: FastAPI):
             await MongoInspectionRepository.ensure_indexes()
     except Exception:
         pass
+
+    # Load YOLOv8 deep learning model weights once during startup lifecycle
+    onion_vision_engine.load_model()
+
     yield
     # Shutdown: cleanly close database connection pool
     await close_db()
