@@ -1,5 +1,6 @@
 import React from 'react';
 import { InspectionProvider, useInspection } from './context/InspectionContext';
+import { SyncProvider } from './context/SyncContext';
 import { AppShell } from './components/AppShell';
 import { HomeScreen } from './components/HomeScreen';
 import { InspectionCapture } from './components/InspectionCapture';
@@ -154,10 +155,14 @@ function AppContent() {
 
 export function App() {
   return (
-    <InspectionProvider>
-      <AppContent />
-    </InspectionProvider>
+    <SyncProvider>
+      <InspectionProvider>
+        <AppContent />
+      </InspectionProvider>
+    </SyncProvider>
   );
 }
 
 export default App;
+
+

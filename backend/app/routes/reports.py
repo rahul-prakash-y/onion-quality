@@ -130,7 +130,21 @@ async def get_continuous_learning_logs():
     summary="Get verified report by Certificate ID or Inspection ID",
     description="Fetch a single verified inspection certificate by its unique Certificate ID or Inspection ID."
 )
-async def get_report_by_id(report_id: str):
+async def get_report_by_id(
+    report_id: str,
+    db: AsyncSession = Depends(get_async_db)
+):
+    # 1. Search in database by certificate_id or inspection_id
+    db_record = await InspectionRepository.get_by_certificate_id(db, report_id)
+    if not db_record:
+        db_record = await InspectionRepository.get_by_inspection_id(db, report_id)
+
+    if db_record and db_record.is_human_verified:
+        mapped = InspectionRepository.map_to_pydantic_report(db_record)
+        if mapped:
+            return mapped
+
+    # 2. Search in pre-seeded in-memory storage
     report = inspection_storage.get_report_by_id(report_id)
     if not report:
         raise HTTPException(

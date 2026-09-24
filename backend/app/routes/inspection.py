@@ -27,9 +27,12 @@ from ..models.schemas import (
     VerificationResponse,
     HumanVerificationRecord,
     DefectCounts,
-    QualitySummary
+    QualitySummary,
+    OnionDetectionItem,
+    PriceBreakdown
 )
 from ..services.ai_engine import AIGradingEngine
+from ..services.onion_vision_engine import onion_vision_engine, OnionVisionEngine
 from ..services.storage import inspection_storage
 
 router = APIRouter(
@@ -157,12 +160,24 @@ async def analyze_inspection(
     if record and record.analysis:
         return record.analysis
 
-    preset_hint = record.metadata.get("preset_hint") if record else None
     image_path = str(record.file_path) if record else db_record.original_image_path
-    analysis = AIGradingEngine.analyze(
+    
+    # Run the simulated YOLO + CNN Computer Vision Inference Engine
+    raw_ai = await onion_vision_engine.analyze_image(image_path)
+
+    analysis = AnalysisResponse(
         inspection_id=inspection_id,
-        image_path=image_path,
-        preset_hint=preset_hint
+        total_onions_detected=raw_ai["total_onions_detected"],
+        counts=DefectCounts(**raw_ai["counts"]),
+        grade_a_percent=raw_ai["grade_a_percent"],
+        urs_percent=raw_ai["urs_percent"],
+        grade_b_percent=raw_ai["grade_b_percent"],
+        avg_diameter_mm=raw_ai["avg_diameter_mm"],
+        overall_score=raw_ai["overall_score"],
+        verdict=raw_ai["verdict"],
+        detections=[OnionDetectionItem(**d) for d in raw_ai["detections"]],
+        price_recommendation=PriceBreakdown(**raw_ai["price_recommendation"]),
+        analyzed_at=datetime.now(timezone.utc).isoformat()
     )
 
     # Store analysis in in-memory storage
@@ -199,10 +214,20 @@ async def verify_inspection(
 
     # Ensure AI analysis is run before verification
     if not record.analysis:
-        analysis = AIGradingEngine.analyze(
+        raw_ai = await onion_vision_engine.analyze_image(str(record.file_path))
+        analysis = AnalysisResponse(
             inspection_id=inspection_id,
-            image_path=str(record.file_path),
-            preset_hint=record.metadata.get("preset_hint")
+            total_onions_detected=raw_ai["total_onions_detected"],
+            counts=DefectCounts(**raw_ai["counts"]),
+            grade_a_percent=raw_ai["grade_a_percent"],
+            urs_percent=raw_ai["urs_percent"],
+            grade_b_percent=raw_ai["grade_b_percent"],
+            avg_diameter_mm=raw_ai["avg_diameter_mm"],
+            overall_score=raw_ai["overall_score"],
+            verdict=raw_ai["verdict"],
+            detections=[OnionDetectionItem(**d) for d in raw_ai["detections"]],
+            price_recommendation=PriceBreakdown(**raw_ai["price_recommendation"]),
+            analyzed_at=datetime.now(timezone.utc).isoformat()
         )
         inspection_storage.set_inspection_analysis(inspection_id, analysis)
         record = inspection_storage.get_inspection(inspection_id)

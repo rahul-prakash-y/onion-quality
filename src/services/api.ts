@@ -3,9 +3,9 @@
  * Interfaces React frontend with FastAPI backend (http://localhost:8000)
  */
 
-import { DigitalCertificate, OnionDetection, QualitySummary, DefectType, GradeClassification } from '../types';
+import { DigitalCertificate, DefectType, GradeClassification } from '../types';
 
-const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
+export const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
 
 export interface UploadApiResponse {
   inspection_id: string;
@@ -25,6 +25,21 @@ export interface BackendDefectCounts {
   undersized: number;
 }
 
+export interface DetectionItemResponse {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  diameter_mm: number;
+  grade: GradeClassification;
+  defect: DefectType;
+  confidence: number;
+  skin_quality_percent: number;
+  firmness: 'Hard' | 'Firm' | 'Soft' | 'Spongy';
+  notes: string;
+}
+
 export interface AnalysisApiResponse {
   inspection_id: string;
   total_onions_detected: number;
@@ -35,20 +50,7 @@ export interface AnalysisApiResponse {
   avg_diameter_mm: number;
   overall_score: number;
   verdict: 'APPROVED_GRADE_A' | 'CONDITIONAL_GRADE_B' | 'REJECTED_URS';
-  detections: Array<{
-    id: string;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    diameter_mm: number;
-    grade: GradeClassification;
-    defect: DefectType;
-    confidence: number;
-    skin_quality_percent: number;
-    firmness: 'Hard' | 'Firm' | 'Soft' | 'Spongy';
-    notes: string;
-  }>;
+  detections: DetectionItemResponse[];
   price_recommendation: {
     base_msp_per_qtl: number;
     quality_bonus_or_penalty: number;
@@ -79,112 +81,129 @@ export interface VerificationApiResponse {
   report: DigitalCertificate;
 }
 
-export const OnionVisionApi = {
-  /**
-   * Health check for FastAPI backend
-   */
-  async checkHealth(): Promise<boolean> {
-    try {
-      const res = await fetch(`${API_BASE_URL}/health`);
-      return res.ok;
-    } catch {
-      return false;
-    }
-  },
-
-  /**
-   * POST /api/v1/inspect/upload
-   * Upload image as multipart/form-data
-   */
-  async uploadImage(
-    file: File | Blob,
-    metadata?: {
-      batchId?: string;
-      region?: string;
-      variety?: string;
-      farmerName?: string;
-      presetHint?: string;
-    }
-  ): Promise<UploadApiResponse> {
-    const formData = new FormData();
-    formData.append('file', file, file instanceof File ? file.name : 'captured_onion.jpg');
-    if (metadata?.batchId) formData.append('batch_id', metadata.batchId);
-    if (metadata?.region) formData.append('region', metadata.region);
-    if (metadata?.variety) formData.append('variety', metadata.variety);
-    if (metadata?.farmerName) formData.append('farmer_name', metadata.farmerName);
-    if (metadata?.presetHint) formData.append('preset_hint', metadata.presetHint);
-
-    const response = await fetch(`${API_BASE_URL}/api/v1/inspect/upload`, {
-      method: 'POST',
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({ detail: response.statusText }));
-      throw new Error(err.detail || 'Failed to upload inspection image');
-    }
-
-    return response.json();
-  },
-
-  /**
-   * GET /api/v1/inspect/{inspection_id}/analyze
-   * Trigger mock AI analysis
-   */
-  async analyzeInspection(inspectionId: string): Promise<AnalysisApiResponse> {
-    const response = await fetch(`${API_BASE_URL}/api/v1/inspect/${inspectionId}/analyze`);
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({ detail: response.statusText }));
-      throw new Error(err.detail || 'Failed to analyze inspection');
-    }
-    return response.json();
-  },
-
-  /**
-   * POST /api/v1/inspect/{inspection_id}/verify
-   * Submit human-in-the-loop verification
-   */
-  async verifyInspection(
-    inspectionId: string,
-    payload: VerificationPayload
-  ): Promise<VerificationApiResponse> {
-    const response = await fetch(`${API_BASE_URL}/api/v1/inspect/${inspectionId}/verify`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({ detail: response.statusText }));
-      throw new Error(err.detail || 'Failed to verify inspection');
-    }
-
-    return response.json();
-  },
-
-  /**
-   * GET /api/v1/reports/history
-   * Fetch verified reports history
-   */
-  async getReportsHistory(filters?: {
-    verdict?: string;
+/**
+ * Requirement 1: uploadInspectionImage(imageFile)
+ * Uploads an inspection photo as multipart/form-data to POST /api/v1/inspect/upload
+ */
+export async function uploadInspectionImage(
+  imageFile: File | Blob,
+  metadata?: {
+    batchId?: string;
     region?: string;
-    search?: string;
-  }): Promise<{ total_count: number; reports: DigitalCertificate[] }> {
-    const params = new URLSearchParams();
-    if (filters?.verdict) params.append('verdict', filters.verdict);
-    if (filters?.region) params.append('region', filters.region);
-    if (filters?.search) params.append('search', filters.search);
+    variety?: string;
+    farmerName?: string;
+    presetHint?: string;
+  }
+): Promise<UploadApiResponse> {
+  const formData = new FormData();
+  formData.append('file', imageFile, imageFile instanceof File ? imageFile.name : 'onion_tray_capture.jpg');
+  if (metadata?.batchId) formData.append('batch_id', metadata.batchId);
+  if (metadata?.region) formData.append('region', metadata.region);
+  if (metadata?.variety) formData.append('variety', metadata.variety);
+  if (metadata?.farmerName) formData.append('farmer_name', metadata.farmerName);
+  if (metadata?.presetHint) formData.append('preset_hint', metadata.presetHint);
 
-    const url = `${API_BASE_URL}/api/v1/reports/history${params.toString() ? `?${params.toString()}` : ''}`;
-    const response = await fetch(url);
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({ detail: response.statusText }));
-      throw new Error(err.detail || 'Failed to fetch reports history');
-    }
+  const response = await fetch(`${API_BASE_URL}/api/v1/inspect/upload`, {
+    method: 'POST',
+    body: formData,
+  });
 
-    return response.json();
-  },
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(errorBody.detail || `Upload failed with HTTP ${response.status}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Requirement 2: getGradingResults(inspectionId)
+ * Triggers/fetches AI grading inference results from GET /api/v1/inspect/{inspection_id}/analyze
+ */
+export async function getGradingResults(inspectionId: string): Promise<AnalysisApiResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/inspect/${inspectionId}/analyze`, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(errorBody.detail || `Analysis failed with HTTP ${response.status}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Requirement 3: submitHumanVerification(inspectionId, correctedData)
+ * Submits inspector adjustments and human-in-the-loop corrections to POST /api/v1/inspect/{inspection_id}/verify
+ */
+export async function submitHumanVerification(
+  inspectionId: string,
+  correctedData: VerificationPayload
+): Promise<VerificationApiResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/inspect/${inspectionId}/verify`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify(correctedData),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(errorBody.detail || `Verification failed with HTTP ${response.status}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Fetches verified reports history from GET /api/v1/reports/history
+ */
+export async function fetchReportsHistory(filters?: {
+  verdict?: string;
+  region?: string;
+  search?: string;
+}): Promise<{ total_count: number; reports: DigitalCertificate[] }> {
+  const params = new URLSearchParams();
+  if (filters?.verdict) params.append('verdict', filters.verdict);
+  if (filters?.region) params.append('region', filters.region);
+  if (filters?.search) params.append('search', filters.search);
+
+  const url = `${API_BASE_URL}/api/v1/reports/history${params.toString() ? `?${params.toString()}` : ''}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(err.detail || 'Failed to fetch reports history');
+  }
+
+  return response.json();
+}
+
+/**
+ * Checks server health probe
+ */
+export async function checkBackendHealth(): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    const res = await fetch(`${API_BASE_URL}/health`, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+// Grouped namespace export
+export const OnionVisionApi = {
+  uploadInspectionImage,
+  getGradingResults,
+  submitHumanVerification,
+  fetchReportsHistory,
+  checkBackendHealth,
 };
