@@ -23,7 +23,14 @@ import {
 } from 'lucide-react';
 import { useInspection } from '../context/InspectionContext';
 import { useSync } from '../context/SyncContext';
-import { submitHumanVerification, BackendDefectCounts } from '../services/api';
+import { 
+  submitHumanVerification, 
+  uploadInspectionImage, 
+  getGradingResults, 
+  dataURLtoBlob, 
+  createSampleImageBlob, 
+  BackendDefectCounts 
+} from '../services/api';
 import { OnionVisualView } from './OnionVisualView';
 import { OnionInspectorModal } from './OnionInspectorModal';
 import { OnionDetection, DefectType, GradeClassification } from '../types';
@@ -43,7 +50,9 @@ export const AIAnalysisResults: React.FC = () => {
     setHumanVerification, 
     addReport, 
     setSelectedReport, 
-    language 
+    language,
+    currentInspectionId,
+    setCurrentInspectionId
   } = useInspection();
 
   const {
@@ -96,7 +105,25 @@ export const AIAnalysisResults: React.FC = () => {
 
     if (effectiveOnline) {
       try {
-        // Attempt live API verification submission to FastAPI backend
+        // Ensure we have a valid server inspection ID (upload on-the-fly if user started from preset)
+        let targetInspectionId = currentInspectionId;
+        if (!targetInspectionId) {
+          const imageBlob = capturedImage && capturedImage.startsWith('data:')
+            ? dataURLtoBlob(capturedImage)
+            : await createSampleImageBlob(`Sample Tray ${currentBatchId} (${selectedRegion})`);
+
+          const uploadRes = await uploadInspectionImage(imageBlob, {
+            batchId: currentBatchId,
+            region: selectedRegion,
+            variety: activePreset.variety || 'Bhima Super (Nashik Red)',
+            farmerName: activePreset.farmerName || 'Rameshwar Patil',
+            presetHint: activePreset.id,
+          });
+          targetInspectionId = uploadRes.inspectionId || uploadRes.inspection_id;
+          setCurrentInspectionId(targetInspectionId);
+          await getGradingResults(targetInspectionId).catch(() => {});
+        }
+
         const defectCounts: BackendDefectCounts = {
           healthy: activeDetections.filter(d => d.defect === 'none').length,
           damaged: damagedCount,
@@ -105,9 +132,8 @@ export const AIAnalysisResults: React.FC = () => {
           undersized: undersizedCount
         };
 
-        // If batch corresponds to a server inspection ID, submit to backend
-        const inspectionId = currentBatchId.toLowerCase().replace(/[^a-z0-9]/g, '_');
-        await submitHumanVerification(inspectionId, {
+        // Submit live human verification to FastAPI backend with real inspection ID
+        const verifyRes = await submitHumanVerification(targetInspectionId, {
           status: 'approved',
           inspector_id: 'INS-MH-042',
           inspector_name: 'Anil Kulkarni (Grading Officer)',
@@ -115,14 +141,17 @@ export const AIAnalysisResults: React.FC = () => {
           corrected_counts: defectCounts,
           corrected_grade_a_percent: currentSummary.gradeAPercent,
           corrected_urs_percent: currentSummary.ursPercent
-        }).catch((err) => {
-          // If server returns error or is not reachable, fallback gracefully to offline storage
-          console.warn('[API Client] Live verification call failed, caching to offline queue:', err);
-          throw err;
         });
+
+        // Store live certified report in local reports ledger
+        if (verifyRes?.report) {
+          addReport(verifyRes.report);
+          setSelectedReport(verifyRes.report);
+        }
 
         setIsSavedOffline(false);
       } catch (err: any) {
+        console.warn('[API Client] Live verification call failed, caching to offline queue:', err);
         // Fallback to IndexedDB offline queue on network error
         await saveInspectionOffline({
           imageDataUrl: capturedImage,
@@ -196,21 +225,41 @@ export const AIAnalysisResults: React.FC = () => {
 
     if (effectiveOnline) {
       try {
-        const inspectionId = currentBatchId.toLowerCase().replace(/[^a-z0-9]/g, '_');
-        await submitHumanVerification(inspectionId, {
+        let targetInspectionId = currentInspectionId;
+        if (!targetInspectionId) {
+          const imageBlob = capturedImage && capturedImage.startsWith('data:')
+            ? dataURLtoBlob(capturedImage)
+            : await createSampleImageBlob(`Sample Tray ${currentBatchId} (${selectedRegion})`);
+
+          const uploadRes = await uploadInspectionImage(imageBlob, {
+            batchId: currentBatchId,
+            region: selectedRegion,
+            variety: activePreset.variety || 'Bhima Super (Nashik Red)',
+            farmerName: activePreset.farmerName || 'Rameshwar Patil',
+            presetHint: activePreset.id,
+          });
+          targetInspectionId = uploadRes.inspectionId || uploadRes.inspection_id;
+          setCurrentInspectionId(targetInspectionId);
+          await getGradingResults(targetInspectionId).catch(() => {});
+        }
+
+        const verifyRes = await submitHumanVerification(targetInspectionId, {
           status: 'flagged',
           inspector_id: 'INS-MH-042',
           inspector_name: 'Anil Kulkarni (Grading Officer)',
           feedback_notes: flagReason,
           corrected_grade_a_percent: Math.min(100, currentSummary.gradeAPercent + 10),
           corrected_urs_percent: Math.max(0, currentSummary.ursPercent - 10)
-        }).catch((err) => {
-          console.warn('[API Client] Live verification call failed, fallback to offline:', err);
-          throw err;
         });
+
+        if (verifyRes?.report) {
+          addReport(verifyRes.report);
+          setSelectedReport(verifyRes.report);
+        }
 
         setIsSavedOffline(false);
       } catch (err: any) {
+        console.warn('[API Client] Live verification call failed, fallback to offline:', err);
         await saveInspectionOffline({
           imageDataUrl: capturedImage,
           batchId: currentBatchId,
@@ -243,6 +292,7 @@ export const AIAnalysisResults: React.FC = () => {
 
     // Proceed to Module 5 report
     setInspectionStep('report');
+
   };
 
   // Get color for bounding boxes

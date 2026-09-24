@@ -42,6 +42,7 @@ export interface DefectCounts {
   undersized: number;
   mechanicalCut: number;
   doubleOrDeformed: number;
+  healthy?: number;
 }
 
 export interface PriceBreakdown {

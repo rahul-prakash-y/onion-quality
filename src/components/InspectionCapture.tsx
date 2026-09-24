@@ -77,15 +77,16 @@ export const InspectionCapture: React.FC = () => {
       const reader = new FileReader();
       reader.onload = (event) => {
         setCapturedImage(event.target?.result as string);
-        // Start simulated AI analysis upon image selection
-        startAnalysisFlow();
       };
       reader.readAsDataURL(file);
+      // Trigger live asynchronous flow with real uploaded File
+      startAnalysisFlow(file);
     }
   };
 
   const handleCapture = () => {
-    startAnalysisFlow();
+    // Trigger live asynchronous flow with captured image (or synthetic sample if empty)
+    startAnalysisFlow(capturedImage);
   };
 
   // If in 'analyzing' state, show the required Module 3 Analyzing loading screen
