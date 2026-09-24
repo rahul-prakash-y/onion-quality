@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { ProcurementCenter, Language } from '../types';
 import { TRANSLATIONS } from '../data/translations';
+import { useInspection } from '../context/InspectionContext';
 import { LanguageToggle } from './LanguageToggle';
 
 interface HeaderProps {
@@ -32,13 +33,42 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleMobileFrame,
 }) => {
   const t = TRANSLATIONS[language];
+  const { isDemoMode, toggleDemoMode } = useInspection();
+  const tapTimesRef = React.useRef<number[]>([]);
+
+  const handleLogoTap = () => {
+    const now = Date.now();
+    tapTimesRef.current = [...tapTimesRef.current.filter((time) => now - time < 2000), now];
+
+    if (tapTimesRef.current.length >= 5) {
+      tapTimesRef.current = [];
+      toggleDemoMode();
+    }
+  };
 
   return (
-    <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-emerald-900/40 px-4 py-2.5 transition-all">
+    <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-emerald-900/40 px-4 py-2.5 transition-all relative">
+      {/* Discreet Demo Mode indicator */}
+      {isDemoMode && (
+        <div 
+          className="absolute top-1 left-1 z-50 flex items-center justify-center pointer-events-none"
+          title="Demo Mode Active"
+        >
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400 shadow-[0_0_8px_#10b981]" />
+          </span>
+        </div>
+      )}
+
       <div className="flex items-center justify-between gap-2">
-        {/* Logo and Brand */}
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-600 to-rose-700 p-0.5 shadow-glow-green shrink-0">
+        {/* Logo and Brand (Secret 5x tap to toggle Demo Mode) */}
+        <div 
+          onClick={handleLogoTap}
+          className="flex items-center gap-2.5 min-w-0 cursor-pointer group select-none"
+          id="header-logo-brand"
+        >
+          <div className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-600 to-rose-700 p-0.5 shadow-glow-green shrink-0 group-hover:scale-105 transition">
             <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center text-lg">
               🧅
             </div>

@@ -30,11 +30,30 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     setSelectedCenter, 
     language, 
     toggleLanguage, 
+    isDemoMode,
+    toggleDemoMode,
     isMobileFrame, 
     toggleMobileFrame 
   } = useInspection();
 
   const t = TRANSLATIONS[language];
+  const tapTimesRef = React.useRef<number[]>([]);
+
+  // Secret 5-tap gesture on the header logo to toggle Demo Mode
+  const handleLogoTap = (e: React.MouseEvent) => {
+    const now = Date.now();
+    tapTimesRef.current = [...tapTimesRef.current.filter((time) => now - time < 2000), now];
+
+    if (tapTimesRef.current.length >= 5) {
+      tapTimesRef.current = [];
+      toggleDemoMode();
+      return;
+    }
+
+    if (currentScreen !== 'home') {
+      setCurrentScreen('home');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-start sm:py-6 sm:px-4">
@@ -46,6 +65,21 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             : 'max-w-[480px] bg-slate-900 shadow-2xl min-h-screen sm:min-h-0 sm:rounded-3xl sm:border sm:border-slate-800 overflow-hidden relative'
         }`}
       >
+        {/* Subtle Demo Mode Indicator (Tiny green dot in corner of app shell) */}
+        {isDemoMode && (
+          <div 
+            className="absolute top-2 left-2.5 z-50 flex items-center justify-center pointer-events-none select-none transition-all duration-300"
+            title="Demo Mode Active - Stage Ready"
+            id="demo-mode-indicator"
+            aria-label="Demo Mode Active"
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400 shadow-[0_0_8px_#10b981]" />
+            </span>
+          </div>
+        )}
+
         {/* Smartphone Status Bar (simulates native mobile screen on desktop) */}
         {isMobileFrame && (
           <div className="hidden sm:flex items-center justify-between px-6 pt-3 pb-1 bg-slate-900 z-40 select-none">
@@ -65,10 +99,12 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
         {/* Top App Header */}
         <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-emerald-900/40 px-4 py-2.5 transition-all">
           <div className="flex items-center justify-between gap-2">
-            {/* Logo and Brand */}
+            {/* Logo and Brand (with Secret 5-Tap Gesture) */}
             <div 
-              onClick={() => setCurrentScreen('home')} 
-              className="flex items-center gap-2.5 min-w-0 cursor-pointer group"
+              onClick={handleLogoTap} 
+              className="flex items-center gap-2.5 min-w-0 cursor-pointer group select-none"
+              title="OnionVision AI (Tap 5x rapidly for Demo Mode)"
+              id="header-logo-brand"
             >
               <div className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-600 to-rose-700 p-0.5 shadow-glow-green shrink-0 group-hover:scale-105 transition">
                 <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center text-lg">

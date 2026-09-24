@@ -15,6 +15,7 @@ import { useInspection } from '../context/InspectionContext';
 import { useTranslation } from 'react-i18next';
 import { GeographicRegion, SamplePreset } from '../types';
 import { SAMPLE_PRESETS } from '../data/mockData';
+import { DEMO_SAMPLE_IMAGE } from '../data/demoData';
 import { OnionVisualView } from './OnionVisualView';
 
 export const InspectionCapture: React.FC = () => {
@@ -30,10 +31,18 @@ export const InspectionCapture: React.FC = () => {
     setActiveDetections, 
     inspectionStep, 
     analyzingStepIndex, 
-    startAnalysisFlow 
+    startAnalysisFlow,
+    isDemoMode 
   } = useInspection();
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Automatically bypass live camera and load pre-selected perfect onion sample when demo mode is active
+  React.useEffect(() => {
+    if (isDemoMode && !capturedImage) {
+      setCapturedImage(DEMO_SAMPLE_IMAGE);
+    }
+  }, [isDemoMode, capturedImage, setCapturedImage]);
 
   const geographicProfiles: Record<GeographicRegion, { variety: string; mandi: string; desc: string }> = {
     'Maharashtra': { 
@@ -87,8 +96,8 @@ export const InspectionCapture: React.FC = () => {
   };
 
   const handleCapture = () => {
-    // Trigger live asynchronous flow with captured image (or synthetic sample if empty)
-    startAnalysisFlow(capturedImage);
+    // Trigger live asynchronous flow with captured image (or demo sample if in demo mode)
+    startAnalysisFlow(isDemoMode ? DEMO_SAMPLE_IMAGE : capturedImage);
   };
 
   // If in 'analyzing' state, show the required Module 3 Analyzing loading screen
@@ -251,12 +260,20 @@ export const InspectionCapture: React.FC = () => {
       {/* 1. Simulated Camera Viewfinder Area (placeholder gray box with camera icon) */}
       <div className="space-y-2">
         <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-slate-800/90 border-2 border-dashed border-slate-600 shadow-2xl flex flex-col items-center justify-center p-4 group">
-          {capturedImage ? (
-            <img 
-              src={capturedImage} 
-              alt="Uploaded Onion Sample" 
-              className="w-full h-full object-cover" 
-            />
+          {(capturedImage || (isDemoMode ? DEMO_SAMPLE_IMAGE : null)) ? (
+            <div className="w-full h-full relative">
+              <img 
+                src={capturedImage || DEMO_SAMPLE_IMAGE} 
+                alt="Uploaded Onion Sample" 
+                className="w-full h-full object-cover" 
+              />
+              {isDemoMode && (
+                <div className="absolute top-2 left-2 px-2 py-0.5 rounded-lg bg-slate-950/80 backdrop-blur-sm border border-emerald-500/40 text-[9.5px] font-mono font-bold text-emerald-300 flex items-center gap-1.5 shadow-md">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>CALIBRATED DEMO TRAY (4:3)</span>
+                </div>
+              )}
+            </div>
           ) : (
             /* Simulated Optical Viewfinder Area */
             <div className="w-full h-full flex flex-col items-center justify-center relative bg-gradient-to-b from-slate-800 to-slate-850">

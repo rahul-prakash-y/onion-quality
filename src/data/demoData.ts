@@ -1,0 +1,377 @@
+import { OnionDetection, QualitySummary, DigitalCertificate } from '../types';
+
+export const DEMO_SAMPLE_IMAGE = '/assets/perfect-onion-sample.jpg';
+
+/**
+ * Hardcoded, highly accurate AI prediction state with perfect bounding box coordinates
+ * Calibrated specifically for the 4:3 high-resolution inspection tray image in public/assets/perfect-onion-sample.jpg
+ */
+export const DEMO_PERFECT_DETECTIONS: OnionDetection[] = [
+  // Row 1 (Top row)
+  {
+    id: 'demo-on-01',
+    x: 10.5,
+    y: 9.5,
+    width: 10.5,
+    height: 14,
+    diameterMm: 62.4,
+    grade: 'Grade A',
+    defect: 'none',
+    confidence: 0.99,
+    skinQualityPercent: 98,
+    firmness: 'Hard',
+    notes: 'Prime Nashik Red Globe, tight dry neck, export tier 1'
+  },
+  {
+    id: 'demo-on-02',
+    x: 23.5,
+    y: 9.5,
+    width: 10.5,
+    height: 14,
+    diameterMm: 61.8,
+    grade: 'Grade A',
+    defect: 'none',
+    confidence: 0.98,
+    skinQualityPercent: 96,
+    firmness: 'Hard',
+    notes: 'Optimal globular caliber, intact dry outer scale'
+  },
+  {
+    id: 'demo-on-03',
+    x: 36.5,
+    y: 9.5,
+    width: 10.5,
+    height: 14,
+    diameterMm: 63.2,
+    grade: 'Grade A',
+    defect: 'none',
+    confidence: 0.99,
+    skinQualityPercent: 97,
+    firmness: 'Hard',
+    notes: 'High firmness density, uniform ruby-bronze husk'
+  },
+  {
+    id: 'demo-on-04',
+    x: 49.5,
+    y: 9.5,
+    width: 10.5,
+    height: 14,
+    diameterMm: 60.5,
+    grade: 'Grade A',
+    defect: 'none',
+    confidence: 0.97,
+    skinQualityPercent: 95,
+    firmness: 'Hard',
+    notes: 'AGMARK Grade A export benchmark'
+  },
+  {
+    id: 'demo-on-05',
+    x: 62.5,
+    y: 9.5,
+    width: 10.5,
+    height: 14,
+    diameterMm: 62.0,
+    grade: 'Grade A',
+    defect: 'none',
+    confidence: 0.98,
+    skinQualityPercent: 96,
+    firmness: 'Hard',
+    notes: 'Zero mechanical bruising, clean basal plate'
+  },
+  {
+    id: 'demo-on-06',
+    x: 75.5,
+    y: 9.5,
+    width: 10.5,
+    height: 14,
+    diameterMm: 61.2,
+    grade: 'Grade A',
+    defect: 'none',
+    confidence: 0.97,
+    skinQualityPercent: 94,
+    firmness: 'Hard',
+    notes: 'Firm tight neck, dormant apical bud'
+  },
+
+  // Row 2
+  {
+    id: 'demo-on-07',
+    x: 10.5,
+    y: 25.5,
+    width: 10.5,
+    height: 14,
+    diameterMm: 63.0,
+    grade: 'Grade A',
+    defect: 'none',
+    confidence: 0.99,
+    skinQualityPercent: 97,
+    firmness: 'Hard',
+    notes: 'High dry matter percentage, export approved'
+  },
+  {
+    id: 'demo-on-08',
+    x: 23.5,
+    y: 25.5,
+    width: 10.5,
+    height: 14,
+    diameterMm: 64.5,
+    grade: 'Grade A',
+    defect: 'none',
+    confidence: 0.99,
+    skinQualityPercent: 99,
+    firmness: 'Hard',
+    notes: 'Jumbo export caliber, perfect circularity'
+  },
+  {
+    id: 'demo-on-09',
+    x: 36.5,
+    y: 25.5,
+    width: 10.5,
+    height: 14,
+    diameterMm: 62.8,
+    grade: 'Grade A',
+    defect: 'none',
+    confidence: 0.98,
+    skinQualityPercent: 98,
+    firmness: 'Hard',
+    notes: 'Solid compact layers, zero internal voids'
+  },
+  {
+    id: 'demo-on-10',
+    x: 49.5,
+    y: 25.5,
+    width: 10.5,
+    height: 14,
+    diameterMm: 61.0,
+    grade: 'Grade A',
+    defect: 'none',
+    confidence: 0.97,
+    skinQualityPercent: 95,
+    firmness: 'Hard',
+    notes: 'Dry papery scale, excellent curing'
+  },
+  {
+    id: 'demo-on-11',
+    x: 62.5,
+    y: 25.5,
+    width: 10.5,
+    height: 14,
+    diameterMm: 63.5,
+    grade: 'Grade A',
+    defect: 'none',
+    confidence: 0.98,
+    skinQualityPercent: 97,
+    firmness: 'Hard',
+    notes: 'Prime caliber, APMC Lasalgaon standard'
+  },
+  {
+    id: 'demo-on-12',
+    x: 75.5,
+    y: 25.5,
+    width: 10.5,
+    height: 14,
+    diameterMm: 60.8,
+    grade: 'Grade A',
+    defect: 'none',
+    confidence: 0.98,
+    skinQualityPercent: 96,
+    firmness: 'Hard',
+    notes: 'Optimal pungency and firmness'
+  },
+
+  // Row 3 (Center row)
+  {
+    id: 'demo-on-13',
+    x: 10.5,
+    y: 41.5,
+    width: 10.5,
+    height: 14,
+    diameterMm: 62.1,
+    grade: 'Grade A',
+    defect: 'none',
+    confidence: 0.98,
+    skinQualityPercent: 96,
+    firmness: 'Hard',
+    notes: 'Intact outer tunic, zero fungal spores'
+  },
+  {
+    id: 'demo-on-14',
+    x: 23.5,
+    y: 41.5,
+    width: 10.5,
+    height: 14,
+    diameterMm: 61.4,
+    grade: 'Grade A',
+    defect: 'none',
+    confidence: 0.97,
+    skinQualityPercent: 95,
+    firmness: 'Hard',
+    notes: 'Consistent caliber and deep hue'
+  },
+  {
+    id: 'demo-on-15',
+    x: 36.5,
+    y: 41.5,
+    width: 10.5,
+    height: 14,
+    diameterMm: 63.8,
+    grade: 'Grade A',
+    defect: 'none',
+    confidence: 0.99,
+    skinQualityPercent: 98,
+    firmness: 'Hard',
+    notes: 'Benchmark specimen for Gulf export lot'
+  },
+  {
+    id: 'demo-on-16',
+    x: 49.5,
+    y: 41.5,
+    width: 10.5,
+    height: 14,
+    diameterMm: 62.5,
+    grade: 'Grade A',
+    defect: 'none',
+    confidence: 0.98,
+    skinQualityPercent: 97,
+    firmness: 'Hard',
+    notes: 'Zero neck softening, tight root base'
+  },
+  {
+    id: 'demo-on-17',
+    x: 62.5,
+    y: 41.5,
+    width: 10.5,
+    height: 14,
+    diameterMm: 61.9,
+    grade: 'Grade A',
+    defect: 'none',
+    confidence: 0.98,
+    skinQualityPercent: 96,
+    firmness: 'Hard',
+    notes: 'Uniform ruby scale structure'
+  },
+  {
+    id: 'demo-on-18',
+    x: 75.5,
+    y: 41.5,
+    width: 10.5,
+    height: 14,
+    diameterMm: 60.2,
+    grade: 'Grade A',
+    defect: 'none',
+    confidence: 0.96,
+    skinQualityPercent: 94,
+    firmness: 'Hard',
+    notes: 'Dry, sound bulb meeting all AGMARK specs'
+  },
+
+  // Row 4
+  {
+    id: 'demo-on-19',
+    x: 10.5,
+    y: 57.5,
+    width: 10.5,
+    height: 14,
+    diameterMm: 61.5,
+    grade: 'Grade A',
+    defect: 'none',
+    confidence: 0.97,
+    skinQualityPercent: 95,
+    firmness: 'Hard',
+    notes: 'Export Grade A prime caliber'
+  },
+  {
+    id: 'demo-on-20',
+    x: 23.5,
+    y: 57.5,
+    width: 10.5,
+    height: 14,
+    diameterMm: 54.8,
+    grade: 'Grade B',
+    defect: 'none',
+    confidence: 0.94,
+    skinQualityPercent: 91,
+    firmness: 'Firm',
+    notes: 'Caliber 54.8mm within standard tolerance tier'
+  },
+  {
+    id: 'demo-on-21',
+    x: 36.5,
+    y: 57.5,
+    width: 10.5,
+    height: 14,
+    diameterMm: 62.9,
+    grade: 'Grade A',
+    defect: 'none',
+    confidence: 0.99,
+    skinQualityPercent: 98,
+    firmness: 'Hard',
+    notes: 'Dense spherical profile, sound skin'
+  },
+  {
+    id: 'demo-on-22',
+    x: 49.5,
+    y: 57.5,
+    width: 10.5,
+    height: 14,
+    diameterMm: 61.7,
+    grade: 'Grade A',
+    defect: 'none',
+    confidence: 0.98,
+    skinQualityPercent: 96,
+    firmness: 'Hard',
+    notes: 'Zero fungal lesions or cuts'
+  },
+  {
+    id: 'demo-on-23',
+    x: 62.5,
+    y: 57.5,
+    width: 10.5,
+    height: 14,
+    diameterMm: 62.3,
+    grade: 'Grade A',
+    defect: 'none',
+    confidence: 0.98,
+    skinQualityPercent: 97,
+    firmness: 'Hard',
+    notes: 'Solid bulb density, prime export rating'
+  },
+  {
+    id: 'demo-on-24',
+    x: 75.5,
+    y: 57.5,
+    width: 10.5,
+    height: 14,
+    diameterMm: 60.9,
+    grade: 'Grade A',
+    defect: 'none',
+    confidence: 0.97,
+    skinQualityPercent: 95,
+    firmness: 'Hard',
+    notes: 'Clean dry neck, zero sprouting'
+  }
+];
+
+export const DEMO_PERFECT_SUMMARY: QualitySummary = {
+  gradeAPercent: 96,
+  gradeBPercent: 4,
+  ursPercent: 0,
+  totalCount: 24,
+  avgDiameterMm: 61.8,
+  overallScore: 98,
+  verdict: 'APPROVED_GRADE_A',
+  defects: {
+    sprouted: 0,
+    rottenOrMould: 0,
+    undersized: 0,
+    mechanicalCut: 0,
+    doubleOrDeformed: 0,
+    healthy: 24
+  },
+  priceRecommendation: {
+    baseMspPerQtl: 2400,
+    qualityBonusOrPenalty: 520,
+    recommendedPricePerQtl: 2920,
+    totalEstimatedLotValue: 140160
+  }
+};

@@ -24,6 +24,11 @@ import {
   createSampleImageBlob 
 } from '../services/api';
 import i18n from '../i18n';
+import { 
+  DEMO_SAMPLE_IMAGE, 
+  DEMO_PERFECT_DETECTIONS, 
+  DEMO_PERFECT_SUMMARY 
+} from '../data/demoData';
 
 interface InspectionContextType {
   // Screen and basic settings
@@ -36,6 +41,11 @@ interface InspectionContextType {
   toggleMobileFrame: () => void;
   selectedCenter: ProcurementCenter;
   setSelectedCenter: (center: ProcurementCenter) => void;
+
+  // Demo Mode for Live Hackathon Presentations
+  isDemoMode: boolean;
+  toggleDemoMode: () => void;
+  setIsDemoMode: (val: boolean) => void;
 
   // Module 3 & 4 Inspection Flow State
   inspectionStep: InspectionStep;
@@ -84,13 +94,49 @@ export const InspectionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [isMobileFrame, setIsMobileFrame] = useState(true);
   const [selectedCenter, setSelectedCenter] = useState<ProcurementCenter>(PROCUREMENT_CENTERS[0]);
 
+  // Demo Mode for Live Hackathon Presentations
+  const [isDemoMode, setIsDemoModeState] = useState<boolean>(() => {
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      return window.sessionStorage.getItem('onionvision_demo_mode') === 'true';
+    }
+    return false;
+  });
+
+  const setIsDemoMode = useCallback((val: boolean) => {
+    setIsDemoModeState(val);
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      window.sessionStorage.setItem('onionvision_demo_mode', String(val));
+    }
+    if (val) {
+      setCapturedImage(DEMO_SAMPLE_IMAGE);
+    }
+  }, []);
+
+  const toggleDemoMode = useCallback(() => {
+    setIsDemoModeState((prev) => {
+      const next = !prev;
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        window.sessionStorage.setItem('onionvision_demo_mode', String(next));
+      }
+      if (next) {
+        setCapturedImage(DEMO_SAMPLE_IMAGE);
+      }
+      return next;
+    });
+  }, []);
+
   // Inspection flow
   const [inspectionStep, setInspectionStep] = useState<InspectionStep>('capture');
   const [selectedRegion, setSelectedRegion] = useState<GeographicRegion>('Maharashtra');
   const [currentBatchId, setCurrentBatchId] = useState<string>('BATCH-MH-2026-4401');
   const [currentInspectionId, setCurrentInspectionId] = useState<string | null>(null);
   const [activePreset, setActivePreset] = useState<SamplePreset>(SAMPLE_PRESETS[0]);
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [capturedImage, setCapturedImage] = useState<string | null>(() => {
+    if (typeof window !== 'undefined' && window.sessionStorage && window.sessionStorage.getItem('onionvision_demo_mode') === 'true') {
+      return DEMO_SAMPLE_IMAGE;
+    }
+    return null;
+  });
   const [activeDetections, setActiveDetections] = useState<OnionDetection[]>(SAMPLE_PRESETS[0].detections);
   const [serverQualitySummary, setServerQualitySummary] = useState<QualitySummary | null>(null);
   const [analyzingStepIndex, setAnalyzingStepIndex] = useState(0);
@@ -140,6 +186,9 @@ export const InspectionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setCurrentBatchId(`BATCH-${code}-2026-${randomNum}`);
     setCurrentInspectionId(null);
     setServerQualitySummary(null);
+    if (isDemoMode) {
+      setCapturedImage(DEMO_SAMPLE_IMAGE);
+    }
   };
 
   /**
@@ -153,6 +202,31 @@ export const InspectionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const startAnalysisFlow = async (imageInput?: File | Blob | string | null) => {
     setInspectionStep('analyzing');
     setAnalyzingStepIndex(0); // Step 0: "Detecting individual onions..."
+
+    // Demo Mode Bypass Logic:
+    // 1. Bypass the live device camera and automatically load a high-quality, pre-selected "perfect" onion sample image from the public/assets folder.
+    // 2. Skip the backend network delay by mocking a 1-second loading screen before displaying a hardcoded, highly accurate AI prediction state with perfect bounding box coordinates.
+    if (isDemoMode) {
+      setCapturedImage(DEMO_SAMPLE_IMAGE);
+
+      // Mock 1-second loading screen across progressive stage indicators (330ms + 340ms + 330ms = 1000ms)
+      await new Promise((resolve) => setTimeout(resolve, 330));
+      setAnalyzingStepIndex(1); // Step 1: "Identifying damage and rot..."
+
+      await new Promise((resolve) => setTimeout(resolve, 340));
+      setAnalyzingStepIndex(2); // Step 2: "Estimating Grade A and URS percentages..."
+
+      await new Promise((resolve) => setTimeout(resolve, 330));
+      setAnalyzingStepIndex(3);
+
+      // Display hardcoded, highly accurate AI prediction state with perfect bounding box coordinates
+      setActiveDetections(DEMO_PERFECT_DETECTIONS);
+      setServerQualitySummary(DEMO_PERFECT_SUMMARY);
+
+      setInspectionStep('results');
+      setHumanVerification({ status: 'pending' });
+      return;
+    }
 
     try {
       // 1. Resolve image blob for multipart upload
@@ -267,6 +341,9 @@ export const InspectionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         language,
         toggleLanguage,
         setLanguage,
+        isDemoMode,
+        toggleDemoMode,
+        setIsDemoMode,
         isMobileFrame,
         toggleMobileFrame,
         selectedCenter,
