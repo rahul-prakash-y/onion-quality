@@ -25,7 +25,7 @@ async def get_reports_history(
     verdict: Optional[VerdictType] = Query(None, description="Filter by classification verdict"),
     region: Optional[str] = Query(None, description="Filter by state / geographic source"),
     search: Optional[str] = Query(None, description="Search query across Certificate ID, Lot ID, or Farmer Name"),
-    limit: int = Query(50, ge=1, le=100, description="Maximum reports to return"),
+    limit: int = Query(100, ge=1, le=500, description="Maximum reports to return"),
     offset: int = Query(0, ge=0, description="Offset index for pagination"),
     db: AsyncSession = Depends(get_async_db)
 ):
@@ -85,8 +85,29 @@ async def get_national_onion_intelligence_summary(
     summary="Get aggregated quality statistics across verified lots",
     description="Computes high-level quality passing rates, average Grade A percentages, and defect distributions."
 )
-async def get_reports_analytics():
-    all_reports = inspection_storage.list_reports(limit=500)
+async def get_reports_analytics(
+    db: AsyncSession = Depends(get_async_db)
+):
+    # Query verified records from the database
+    db_records = await InspectionRepository.query_history(
+        db=db,
+        verified_only=True,
+        limit=500
+    )
+    db_reports: List[DigitalCertificateReport] = []
+    for r in db_records:
+        mapped = InspectionRepository.map_to_pydantic_report(r)
+        if mapped:
+            db_reports.append(mapped)
+
+    # In-memory storage reports fallback/merge
+    storage_reports = inspection_storage.list_reports(limit=500)
+    existing_cert_ids = {r.certificate_id for r in db_reports}
+    all_reports = list(db_reports)
+    for sr in storage_reports:
+        if sr.certificate_id not in existing_cert_ids:
+            all_reports.append(sr)
+
     total = len(all_reports)
     if total == 0:
         return {
@@ -102,7 +123,7 @@ async def get_reports_analytics():
     conditional_count = sum(1 for r in all_reports if r.summary.verdict == "CONDITIONAL_GRADE_B")
     urs_count = sum(1 for r in all_reports if r.summary.verdict == "REJECTED_URS")
     avg_score = round(sum(r.summary.overall_score for r in all_reports) / total, 1)
-    total_weight = sum(r.lot_weight_quintals for r in all_reports)
+    total_weight = round(sum(r.lot_weight_quintals for r in all_reports), 1)
 
     return {
         "total_verified_lots": total,

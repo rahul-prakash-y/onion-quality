@@ -176,6 +176,30 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 ---
 
+### 4. Database Seeding & Mock Data Injector (For Presentations & Demos)
+
+Populate the database (PostgreSQL on Render or local Async SQLite) with 50 realistic historical inspection records spanning the last 30 days:
+
+```bash
+# Seed 50 realistic historical records with clean slate (drops and recreates tables)
+python seed_db.py --drop-tables
+
+# Seed custom record count and time span
+python seed_db.py --count 100 --days 45
+
+# Seed against a remote PostgreSQL database on Render
+python seed_db.py --db-url "postgresql+asyncpg://user:pass@host:5432/onionvision_db" --drop-tables
+```
+
+**What the seeder injects:**
+- **Realistic Provenance**: Distributes lots across predefined APMC regions (Lasalgaon/MH, Hubli/KA, Mahuva/GJ, Neemuch/MP, Alwar/RJ).
+- **Calibrated Quality Distribution**: Exactly 60% Grade A dominant (`APPROVED_GRADE_A`), 20% Mixed (`CONDITIONAL_GRADE_B`), and 20% High URS Rejected (`REJECTED_URS`).
+- **Defect Correlations**: Higher sprouting counts for older storage lots (>15 days), higher rot/fungal decay counts for humid coastal mandi zones (Hubli, Mahuva).
+- **Cryptographic SHA-256 Hashes**: Computes authentic 64-character SHA-256 tamper-proof hashes for each digital quality certificate.
+- **Visual Image Bindings**: Pairs records with real onion tray images from `uploads/`.
+
+---
+
 ## 🧪 Running the Test Suite
 
 Run the automated Pytest suite covering all required endpoints, model validations, and edge cases:

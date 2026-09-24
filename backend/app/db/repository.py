@@ -334,17 +334,17 @@ class InspectionRepository:
             timestamp=model.timestamp.strftime("%Y-%m-%d %I:%M %p"),
             lot_id=model.lot_id or f"LOT-MH-{model.inspection_id[-4:].upper()}",
             farmer_name=model.farmer_name or "Rameshwar Patil",
-            farmer_phone="+91 98220 14592",
-            procurement_center="Lasalgaon APMC Main Yard",
+            farmer_phone=v_data.get("farmer_phone") or "+91 98220 14592",
+            procurement_center=v_data.get("procurement_center") or f"{model.geographic_source} Mandi Yard",
             geographic_source=model.geographic_source,  # type: ignore
             inspector_id=model.inspector_id or "INS-APMC-042",
             inspector_name=v_data.get("inspector_name", "Anil Kulkarni"),
             variety=model.variety or "Bhima Super (Nashik Red)",
-            lot_weight_quintals=45.0,
-            sample_weight_kg=5.0,
+            lot_weight_quintals=float(v_data.get("lot_weight_quintals", 45.0)),
+            sample_weight_kg=float(v_data.get("sample_weight_kg", 5.0)),
             summary=summary,
             tamper_proof_hash=tamper_hash,
-            status="VALID",
+            status=v_data.get("certificate_status", "VALID"),
             synced_to_cloud=True,
             human_verification=verification_record
         )
