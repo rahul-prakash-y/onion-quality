@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   History, 
   Search, 
@@ -7,27 +7,55 @@ import {
   AlertTriangle, 
   XCircle, 
   ShieldAlert, 
-  ChevronRight,
-  Calendar,
-  Layers,
-  IndianRupee
+  ChevronRight, 
+  Calendar, 
+  Layers, 
+  IndianRupee,
+  RefreshCw 
 } from 'lucide-react';
 import { DigitalCertificate, Language } from '../types';
+import { useInspection } from '../context/InspectionContext';
+import { fetchReportsHistory } from '../services/api';
 
 interface BatchHistoryProps {
-  batches: DigitalCertificate[];
+  batches?: DigitalCertificate[];
   onSelectBatch: (batch: DigitalCertificate) => void;
   language: Language;
 }
 
 export const BatchHistory: React.FC<BatchHistoryProps> = ({
-  batches,
+  batches: propBatches,
   onSelectBatch,
 }) => {
+  const { reports, setReports, refreshReports } = useInspection();
+  const [isHydrating, setIsHydrating] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'GRADE_A' | 'CONDITIONAL' | 'URS' | 'DISPUTED'>('ALL');
 
-  const filteredBatches = batches.filter(batch => {
+  // Hydrate historical, certified reports directly from FastAPI/SQLite backend on mount
+  useEffect(() => {
+    let isMounted = true;
+    setIsHydrating(true);
+    fetchReportsHistory()
+      .then((res) => {
+        if (isMounted && res.reports) {
+          setReports(res.reports);
+        }
+      })
+      .catch((err) => {
+        console.warn('[BatchHistory] Failed to pull certified reports from backend:', err);
+      })
+      .finally(() => {
+        if (isMounted) setIsHydrating(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [setReports]);
+
+  const activeBatches = propBatches ?? reports;
+
+  const filteredBatches = activeBatches.filter(batch => {
     const matchesSearch = 
       batch.lotId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       batch.farmerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -55,9 +83,19 @@ export const BatchHistory: React.FC<BatchHistoryProps> = ({
               Procurement Batch Ledger
             </h2>
           </div>
-          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-800/40">
-            {batches.length} Certified Lots
-          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => refreshReports()}
+              disabled={isHydrating}
+              className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition text-xs"
+              title="Refresh ledger from central database"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isHydrating ? 'animate-spin text-emerald-400' : ''}`} />
+            </button>
+            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-800/40">
+              {activeBatches.length} Certified Lots
+            </span>
+          </div>
         </div>
 
         {/* Search input */}
@@ -129,7 +167,12 @@ export const BatchHistory: React.FC<BatchHistoryProps> = ({
 
       {/* Batch List */}
       <div className="space-y-2">
-        {filteredBatches.length === 0 ? (
+        {isHydrating && activeBatches.length === 0 ? (
+          <div className="p-8 text-center text-slate-400 bg-slate-900/60 rounded-2xl border border-slate-800 space-y-2">
+            <RefreshCw className="w-6 h-6 mx-auto animate-spin text-emerald-400" />
+            <p className="text-xs font-semibold">Pulling certified lots from APMC Central Ledger...</p>
+          </div>
+        ) : filteredBatches.length === 0 ? (
           <div className="p-8 text-center text-slate-500 bg-slate-900/60 rounded-2xl border border-slate-800">
             <Filter className="w-6 h-6 mx-auto mb-2 opacity-50" />
             <p className="text-xs">No batches match the selected criteria</p>

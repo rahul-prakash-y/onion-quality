@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { 
   ActiveScreen, 
   DigitalCertificate, 
@@ -14,7 +14,6 @@ import {
 import { 
   PROCUREMENT_CENTERS, 
   SAMPLE_PRESETS, 
-  INITIAL_BATCH_HISTORY,
   calculateQualitySummary
 } from '../data/mockData';
 import { 
@@ -59,6 +58,8 @@ interface InspectionContextType {
 
   // Module 5 Reports & Cloud Sync
   reports: DigitalCertificate[];
+  setReports: React.Dispatch<React.SetStateAction<DigitalCertificate[]>>;
+  refreshReports: () => Promise<void>;
   addReport: (report: DigitalCertificate) => void;
   updateReport: (certificateId: string, updated: Partial<DigitalCertificate>) => void;
   selectedReport: DigitalCertificate | null;
@@ -93,31 +94,27 @@ export const InspectionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     status: 'pending'
   });
 
-  // Reports ledger
-  const [reports, setReports] = useState<DigitalCertificate[]>(INITIAL_BATCH_HISTORY);
+  // Reports ledger - Initialized as empty list; hydrated on mount from FastAPI backend
+  const [reports, setReports] = useState<DigitalCertificate[]>([]);
   const [selectedReport, setSelectedReport] = useState<DigitalCertificate | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isDisputeModalOpen, setIsDisputeModalOpen] = useState(false);
 
   // Hydrate reports from backend database on mount
-  useEffect(() => {
-    let isMounted = true;
-    fetchReportsHistory()
-      .then((res) => {
-        if (isMounted && res.reports && res.reports.length > 0) {
-          // Merge with initial history without duplicates
-          setReports((prev) => {
-            const existingIds = new Set(res.reports.map(r => r.certificateId));
-            const uniquePrev = prev.filter(r => !existingIds.has(r.certificateId));
-            return [...res.reports, ...uniquePrev];
-          });
-        }
-      })
-      .catch(() => {
-        // Fall back cleanly to INITIAL_BATCH_HISTORY if server is offline
-      });
-    return () => { isMounted = false; };
+  const refreshReports = useCallback(async () => {
+    try {
+      const res = await fetchReportsHistory();
+      if (res && Array.isArray(res.reports)) {
+        setReports(res.reports);
+      }
+    } catch (err) {
+      console.warn('[InspectionContext] Failed to hydrate reports history from backend:', err);
+    }
   }, []);
+
+  useEffect(() => {
+    refreshReports();
+  }, [refreshReports]);
 
   const currentSummary = serverQualitySummary || calculateQualitySummary(activeDetections);
 
@@ -270,6 +267,8 @@ export const InspectionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         analyzingStepIndex,
         startAnalysisFlow,
         reports,
+        setReports,
+        refreshReports,
         addReport,
         updateReport,
         selectedReport,

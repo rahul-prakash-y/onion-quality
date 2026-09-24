@@ -494,6 +494,127 @@ export async function fetchReportsHistory(filters?: {
   };
 }
 
+// ============================================================================
+// CONTINUOUS LEARNING DATASET EXPORT PIPELINE
+// ============================================================================
+
+export interface DatasetStatsResponse {
+  total_inspections?: number;
+  total_verified?: number;
+  ready_for_export?: number;
+  already_exported_for_training?: number;
+  regions_breakdown?: Record<string, number>;
+  database_engine?: string;
+  status?: string;
+}
+
+export interface DatasetExportResult {
+  filename: string;
+  blob: Blob;
+  recordCount: number;
+  totalAnnotations: number;
+  databaseEngine: string;
+}
+
+/**
+ * Fetches dataset export readiness statistics from GET /api/v1/dataset/stats.
+ * Passes X-Admin-Token header for admin authentication.
+ */
+export async function fetchDatasetStats(
+  adminToken = 'onionvision-admin-secret-2026'
+): Promise<DatasetStatsResponse> {
+  const url = `${API_BASE_URL}/api/v1/dataset/stats`;
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'X-Admin-Token': adminToken,
+      'Accept': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(err.detail || 'Failed to fetch dataset statistics');
+  }
+
+  return response.json();
+}
+
+/**
+ * Calls GET /api/v1/dataset/export with mock X-Admin-Token header.
+ * Packages human-verified samples into YOLO or COCO format.
+ * Automatically triggers browser download of the resulting .zip archive.
+ */
+export async function exportDatasetZip(options?: {
+  format?: 'yolo' | 'coco';
+  region?: string;
+  dryRun?: boolean;
+  includePreviouslyExported?: boolean;
+  limit?: number;
+  adminToken?: string;
+}): Promise<DatasetExportResult> {
+  const format = options?.format || 'yolo';
+  const adminToken = options?.adminToken || 'onionvision-admin-secret-2026';
+
+  const params = new URLSearchParams();
+  params.append('format', format);
+  if (options?.region) params.append('region', options.region);
+  if (options?.dryRun !== undefined) params.append('dry_run', String(options.dryRun));
+  if (options?.includePreviouslyExported !== undefined) {
+    params.append('include_previously_exported', String(options.includePreviouslyExported));
+  }
+  if (options?.limit) params.append('limit', String(options.limit));
+
+  const url = `${API_BASE_URL}/api/v1/dataset/export?${params.toString()}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'X-Admin-Token': adminToken
+    }
+  });
+
+  if (!response.ok) {
+    const errorJson = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(errorJson.detail || `Dataset export failed with status ${response.status}`);
+  }
+
+  // Extract filename from Content-Disposition header
+  let filename = `OnionVision_Retraining_${format.toUpperCase()}_Dataset.zip`;
+  const disposition = response.headers.get('Content-Disposition');
+  if (disposition) {
+    const match = disposition.match(/filename="?([^"]+)"?/);
+    if (match && match[1]) {
+      filename = match[1];
+    }
+  }
+
+  const recordCount = Number(response.headers.get('X-Export-Record-Count') || 0);
+  const totalAnnotations = Number(response.headers.get('X-Export-Total-Annotations') || 0);
+  const databaseEngine = response.headers.get('X-Export-Database-Engine') || 'Database';
+
+  // Read response stream as binary Blob
+  const blob = await response.blob();
+
+  // Automatically trigger client-side download
+  const blobUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = blobUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(blobUrl);
+
+  return {
+    filename,
+    blob,
+    recordCount,
+    totalAnnotations,
+    databaseEngine
+  };
+}
+
 /**
  * Checks server health probe
  */
@@ -515,6 +636,8 @@ export const OnionVisionApi = {
   getGradingResults,
   submitHumanVerification,
   fetchReportsHistory,
+  fetchDatasetStats,
+  exportDatasetZip,
   checkBackendHealth,
   adaptDetectionItem,
   adaptQualitySummary,

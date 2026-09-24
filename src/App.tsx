@@ -155,11 +155,11 @@ function AppContent() {
 
 export function App() {
   return (
-    <SyncProvider>
-      <InspectionProvider>
+    <InspectionProvider>
+      <SyncProvider>
         <AppContent />
-      </InspectionProvider>
-    </SyncProvider>
+      </SyncProvider>
+    </InspectionProvider>
   );
 }
 
